@@ -7,9 +7,7 @@ import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
 import com.lolmaxlevel.oneclone_backend.types.CompanyType;
 import com.lolmaxlevel.oneclone_backend.types.DocumentType;
 import com.lolmaxlevel.oneclone_backend.utils.StringUtils;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,12 +22,16 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPlaceholders;
+
 
 @Slf4j // lombok annotation for logging
 @RestController
 @RequestMapping("/api/employee")
 @CrossOrigin(origins = "http://localhost:5173")
 public class EmployeeController {
+
+    private final String TEMPLATE_DIRECTORY_ROOT = "src/main/resources/document_templates/";
 
     private final EmployeeRepository employeeRepository;
     private final WordDocumentGenerator wordDocumentGenerator;
@@ -59,7 +61,7 @@ public class EmployeeController {
 
     @PostMapping("/add")
     public Employee addEmployee(Employee employee) {
-        log.info("Add employee request");
+        log.info("Add employee request" + employee);
         return employeeRepository.save(employee);
     }
 
@@ -100,27 +102,32 @@ public class EmployeeController {
     }
 
     @GetMapping("/get-document")
-    public ResponseEntity<byte[]> generateDocument(@RequestParam Long employeeId) {
-        log.info("Generate document request for employeeId: {}", employeeId);
+    public ResponseEntity<byte[]> generateDocument(@RequestParam Long employeeId, @RequestParam String documentType) {
+        log.info("Generate document request id: {} type: {}", employeeId, documentType);
 
         // Fetch the employee
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
 
         // Create a map of placeholders and fill it with the employee's data
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("name", employee.getName());
-        placeholders.put("surname", employee.getSurname());
-        // Add more placeholders as needed
-        String templatePath = "src/main/resources/document_templates/employee.docx";
+        Map<String, String> placeholders = getPlaceholders(employee);
+
+        String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
         // Generate the document
-        byte[] document = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
-
-        // Return the document
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=document.docx");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(document);
+        try {
+            byte[] document = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
+            // Return the document
+            HttpHeaders headers = new HttpHeaders();
+            String filename = employee.getSurname() + "_" + employee.getName() + ".docx";
+            filename = StringUtils.convertCyrilic(filename.toLowerCase());
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
+            //magic header for docx files
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(document);
+        } catch (Exception e) {
+            log.error("Error while generating document", e);
+            return null;
+        }
     }
 }
