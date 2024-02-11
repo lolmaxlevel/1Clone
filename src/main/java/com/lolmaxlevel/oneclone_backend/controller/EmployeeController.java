@@ -45,6 +45,8 @@ public class EmployeeController {
     }
 
 
+    // Get all employees with pagination and filtering
+    // example: http://localhost:5173/api/employee/all?page=0&size=10&sort=id,desc&surname=Ivanov&name=Ivan&workPosition=maid
     @GetMapping("/all")
     public Page<Employee> getAllEmployees(Pageable pageable, @RequestParam MultiValueMap<String, String> allParams) {
         log.info("Get all employees request" + allParams);
@@ -131,5 +133,70 @@ public class EmployeeController {
             log.error("Error while generating document", e);
             return null;
         }
+    }
+
+    @PatchMapping("/update")
+    public Employee updateEmployee(@RequestParam Long id, @RequestParam String field, @RequestParam String value) {
+        log.info("Update employee request id: {} field: {} value: {}", id, field, value);
+        Employee employee = employeeRepository.findById(id).orElseThrow(() -> new RuntimeException("Employee not found"));
+        switch (field) {
+            case "surname":
+                employee.setSurname(value);
+                break;
+            case "name":
+                employee.setName(value);
+                break;
+            case "secondName":
+                employee.setSecondName(value);
+                break;
+            case "bankAccount":
+                employee.setBankAccount(value);
+                break;
+            case "inn":
+                employee.setInn(value);
+                break;
+            case "dateOfBirth":
+                employee.setDateOfBirth(LocalDate.parse(value));
+                break;
+            case "documentType":
+                employee.setDocumentType(DocumentType.valueOf(value));
+                break;
+            case "documentSeries":
+                employee.setDocumentSeries(value);
+                break;
+            case "documentNumber":
+                employee.setDocumentNumber(value);
+                break;
+            case "documentIssuedBy":
+                employee.setDocumentIssuedBy(value);
+                break;
+            case "documentIssuedDate":
+                employee.setDocumentIssuedDate(LocalDate.parse(value));
+                break;
+            case "nationality":
+                employee.setNationality(CountryType.valueOf(value));
+                break;
+            case "birthPlace":
+                employee.setBirthPlace(CountryType.valueOf(value));
+                break;
+            case "workObject":
+                employee.setWorkObject(value);
+                break;
+            case "workAddress":
+                employee.setWorkAddress(value);
+                break;
+            case "workPosition":
+                employee.setWorkPosition(WorkPositionType.valueOf(value));
+                break;
+            case "omvd":
+                employee.setOmvd(value);
+                break;
+            case "companyType":
+                employee.setCompanyType(CompanyType.valueOf(value));
+                break;
+            default:
+                throw new RuntimeException("Field not found");
+        }
+        return employeeRepository.save(employee);
     }
 }

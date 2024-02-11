@@ -1,6 +1,5 @@
 package com.lolmaxlevel.oneclone_backend.specification;
 
-import jakarta.annotation.Nonnull;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
@@ -40,7 +39,7 @@ public class GenericSpecification<T> implements Specification<T> {
             // If it's not an Enum, proceed as usual
             List<Predicate> predicates = new ArrayList<>();
             for (String value : values) {
-                predicates.add(builder.equal(root.get(key), value));
+                predicates.add(builder.like(root.get(key), "%" + value + "%"));
             }
             return builder.or(predicates.toArray(new Predicate[0]));
         }
