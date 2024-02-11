@@ -23,10 +23,9 @@ public class PlaceHoldersExtractor {
         placeholders.put("{{ DOCUMENT_NUMBER }}", "123");
         placeholders.put("{{ BANK_NUMBER }}", employee.getBankAccount());
         placeholders.put("{{ DATE_START_FULL }}", "12.12.2021года");
-        placeholders.put("{{ NATIONALITY }}", employee.getNationality());
+        placeholders.put("{{ NATIONALITY }}", employee.getNationality().getGenitiveName());
         placeholders.put("{{ FIRST_LETTER }}", employee.getName().substring(0, 1));
         placeholders.put("{{ FIRST_LETTER_S }}", employee.getSecondName().substring(0, 1));
-
         return placeholders;
     }
 }

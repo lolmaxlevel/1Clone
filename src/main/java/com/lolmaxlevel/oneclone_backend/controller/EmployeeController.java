@@ -6,6 +6,8 @@ import com.lolmaxlevel.oneclone_backend.service.WordDocumentGenerator;
 import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
 import com.lolmaxlevel.oneclone_backend.types.CompanyType;
 import com.lolmaxlevel.oneclone_backend.types.DocumentType;
+import com.lolmaxlevel.oneclone_backend.types.CountryType;
+import com.lolmaxlevel.oneclone_backend.types.WorkPositionType;
 import com.lolmaxlevel.oneclone_backend.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -82,11 +84,11 @@ public class EmployeeController {
             employee.setDocumentNumber("Number" + i);
             employee.setDocumentIssuedBy("IssuedBy" + i);
             employee.setDocumentIssuedDate(LocalDate.of(ThreadLocalRandom.current().nextInt(2000, 2023), ThreadLocalRandom.current().nextInt(1, 13), ThreadLocalRandom.current().nextInt(1, 28)));
-            employee.setNationality("Nationality" + i);
-            employee.setBirthPlace("BirthPlace" + i);
+            employee.setNationality(CountryType.values()[ThreadLocalRandom.current().nextInt(CountryType.values().length)]);
+            employee.setBirthPlace(CountryType.values()[ThreadLocalRandom.current().nextInt(CountryType.values().length)]);
             employee.setWorkObject("WorkObject" + i);
             employee.setWorkAddress("WorkAddress" + i);
-            employee.setWorkPosition("WorkPosition" + i);
+            employee.setWorkPosition(WorkPositionType.values()[ThreadLocalRandom.current().nextInt(WorkPositionType.values().length)]);
             employee.setOmvd("Omvd" + i);
             employee.setCompanyType(CompanyType.values()[ThreadLocalRandom.current().nextInt(CompanyType.values().length)]);
             employees.add(employee);
@@ -117,7 +119,7 @@ public class EmployeeController {
             byte[] document = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
             // Return the document
             HttpHeaders headers = new HttpHeaders();
-            String filename = employee.getSurname() + "_" + employee.getName() + ".docx";
+            String filename = employee.getSurname() + "_" + employee.getName() + "_" + documentType + ".docx";
             filename = StringUtils.convertCyrilic(filename.toLowerCase());
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
             //magic header for docx files

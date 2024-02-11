@@ -3,12 +3,13 @@ package com.lolmaxlevel.oneclone_backend.model;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.lolmaxlevel.oneclone_backend.types.CompanyType;
 import com.lolmaxlevel.oneclone_backend.types.DocumentType;
+import com.lolmaxlevel.oneclone_backend.types.CountryType;
+import com.lolmaxlevel.oneclone_backend.types.WorkPositionType;
 import jakarta.annotation.Nonnull;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 
 @Builder
@@ -47,15 +48,15 @@ public class Employee {
     @Column(columnDefinition = "DATE")
     private LocalDate documentIssuedDate;
     @Nonnull
-    private String nationality;
+    private CountryType nationality;
     @Nonnull
-    private String birthPlace;
+    private CountryType birthPlace;
     @Nonnull
     private String workObject;
     @Nonnull
     private String workAddress;
     @Nonnull
-    private String workPosition;
+    private WorkPositionType workPosition;
     @Nonnull
     private String omvd;
     @Nonnull
