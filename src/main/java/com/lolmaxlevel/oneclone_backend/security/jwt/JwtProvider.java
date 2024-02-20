@@ -22,7 +22,7 @@ import java.util.Date;
 public class JwtProvider {
 
 
-    private static final long ACCESS_TOKEN_VALIDITY_MINUTES = 1;
+    private static final long ACCESS_TOKEN_VALIDITY_MINUTES = 5;
     private static final long REFRESH_TOKEN_VALIDITY_DAYS = 30;
 
     private final SecretKey jwtAccessSecret;

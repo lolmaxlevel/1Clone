@@ -40,6 +40,7 @@ public class WebConfig implements WebMvcConfigurer {
                 HttpHeaders.CONTENT_DISPOSITION
         ));
         config.setAllowedMethods(Arrays.asList(
+                HttpMethod.PATCH.name(),
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
                 HttpMethod.PUT.name(),
