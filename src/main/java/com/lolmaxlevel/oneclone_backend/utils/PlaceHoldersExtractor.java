@@ -1,5 +1,6 @@
 package com.lolmaxlevel.oneclone_backend.utils;
 
+import com.lolmaxlevel.oneclone_backend.model.Document;
 import com.lolmaxlevel.oneclone_backend.model.Employee;
 
 import java.util.HashMap;
@@ -18,8 +19,6 @@ public class PlaceHoldersExtractor {
         placeholders.put("{{ ISSUE_DATE }}", employee.getDocumentIssuedDate().toString());
         placeholders.put("{{ INN }}", employee.getInn());
         placeholders.put("{{ COST }}", "1000");
-        placeholders.put("{{ DATE_START }}", "12.12.2021");
-        placeholders.put("{{ DATE_END }}", "12.12.2021");
         placeholders.put("{{ DOCUMENT_NUMBER }}", "123");
         placeholders.put("{{ BANK_NUMBER }}", employee.getBankAccount());
         placeholders.put("{{ DATE_START_FULL }}", "12.12.2021года");

@@ -40,14 +40,11 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET,
-                                "/api/files/all-files",
-                                "/api/files/file/**",
-                                "api/school/all-materials").permitAll()
+                                "/api/employee/get-document").permitAll()
                         .anyRequest()
                         .authenticated()
                 )
                 .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 }

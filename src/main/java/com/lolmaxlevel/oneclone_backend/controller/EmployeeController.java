@@ -1,13 +1,12 @@
 package com.lolmaxlevel.oneclone_backend.controller;
 
+import com.lolmaxlevel.oneclone_backend.model.Document;
 import com.lolmaxlevel.oneclone_backend.model.Employee;
+import com.lolmaxlevel.oneclone_backend.repository.DocumentRepository;
 import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
 import com.lolmaxlevel.oneclone_backend.service.WordDocumentGenerator;
 import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
-import com.lolmaxlevel.oneclone_backend.types.CompanyType;
-import com.lolmaxlevel.oneclone_backend.types.DocumentType;
-import com.lolmaxlevel.oneclone_backend.types.CountryType;
-import com.lolmaxlevel.oneclone_backend.types.WorkPositionType;
+import com.lolmaxlevel.oneclone_backend.types.*;
 import com.lolmaxlevel.oneclone_backend.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -35,13 +35,18 @@ public class EmployeeController {
 
     private final String TEMPLATE_DIRECTORY_ROOT = "src/main/resources/document_templates/";
 
+
     private final EmployeeRepository employeeRepository;
     private final WordDocumentGenerator wordDocumentGenerator;
+    private final DocumentRepository documentRepository;
 
 
-    public EmployeeController(EmployeeRepository employeeRepository, WordDocumentGenerator wordDocumentGenerator) {
+    public EmployeeController(EmployeeRepository employeeRepository,
+                              WordDocumentGenerator wordDocumentGenerator,
+                              DocumentRepository documentRepository) {
         this.employeeRepository = employeeRepository;
         this.wordDocumentGenerator = wordDocumentGenerator;
+        this.documentRepository = documentRepository;
     }
 
 
@@ -106,19 +111,51 @@ public class EmployeeController {
     }
 
     @GetMapping("/get-document")
-    public ResponseEntity<byte[]> generateDocument(@RequestParam Long employeeId, @RequestParam String documentType) {
+    public ResponseEntity<byte[]> generateDocument(@RequestParam Long employeeId,
+                                                   @RequestParam ActType documentType,
+                                                   @RequestParam(required = false) LocalDate dateFrom,
+                                                   @RequestParam(required = false) LocalDate dateTo,
+                                                   @RequestParam(required = false) Double price){
         log.info("Generate document request id: {} type: {}", employeeId, documentType);
 
         // Fetch the employee
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
-
-        // Create a map of placeholders and fill it with the employee's data
         Map<String, String> placeholders = getPlaceholders(employee);
+
+        Document existingDocument;
+        // If dates and price are provided, check if a document with these parameters already exists
+        if (dateFrom != null && dateTo != null && price != null) {
+            existingDocument = documentRepository.findByOwnerAndTypeAndDateFromAndDateToAndPrice(employee, documentType, dateFrom, dateTo, price);
+            if (existingDocument == null) {
+                // If the document does not exist, create a new one
+                Document document = new Document();
+                document.setName(employeeId + "_" + documentType );
+                document.setType(documentType);
+                document.setPrice(price);
+                document.setDateFrom(dateFrom);
+                document.setDateTo(dateTo);
+                document.setOwner(employee);
+                documentRepository.save(document);
+                existingDocument = document;
+            }
+        } else {
+            // If any of the non-required parameters are empty, return the latest document of the specified type and employee
+            existingDocument = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, documentType);
+            if (existingDocument == null) {
+                // If no such document exists, return an error
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+        }
+
+        // If the document exists, use its data to generate the document
+        placeholders.put("{{ DATE_START_FULL }}", existingDocument.getDateFrom().toString());
+        placeholders.put("{{ DATE_END }}", existingDocument.getDateTo().toString());
+        placeholders.put("{{ COST }}", existingDocument.getPrice().toString());
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
         // Generate the document
+        byte[] document = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
-            byte[] document = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
             // Return the document
             HttpHeaders headers = new HttpHeaders();
             String filename = employee.getSurname() + "_" + employee.getName() + "_" + documentType + ".docx";
@@ -134,11 +171,39 @@ public class EmployeeController {
             return null;
         }
     }
+    @GetMapping("/get-exist-document")
+    public ResponseEntity<byte[]> getExistDocument(@RequestParam Long documentId){
+        log.info("Get exist document request id: {}", documentId);
+        Document document = documentRepository.findById(documentId).orElseThrow(() -> new RuntimeException("Document not found"));
+        Employee employee = document.getOwner();
+        Map<String, String> placeholders = getPlaceholders(employee);
+        placeholders.put("{{ DATE_START_FULL }}", document.getDateFrom().toString());
+        placeholders.put("{{ DATE_END }}", document.getDateTo().toString());
+        placeholders.put("{{ COST }}", document.getPrice().toString());
+        String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + document.getType() + "_" + employee.getCompanyType() + ".docx";
+        byte[] doc = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            String filename = employee.getSurname() + "_" + employee.getName() + "_" + document.getType() + ".docx";
+            filename = StringUtils.convertCyrilic(filename.toLowerCase());
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(doc);
+        } catch (Exception e) {
+            log.error("Error while generating document", e);
+            return null;
+        }
+    }
+
+
+
 
     @PatchMapping("/update")
-    public Employee updateEmployee(@RequestParam Long id, @RequestParam String field, @RequestParam String value) {
+    public Employee updateEmployee(@RequestParam String id, @RequestParam String field, @RequestParam String value) {
         log.info("Update employee request id: {} field: {} value: {}", id, field, value);
-        Employee employee = employeeRepository.findById(id).orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findById(Long.valueOf(id)).orElseThrow(() -> new RuntimeException("Employee not found"));
         switch (field) {
             case "surname":
                 employee.setSurname(value);
