@@ -13,15 +13,17 @@ import java.util.List;
 @Slf4j
 public class IpAddressInterceptor implements HandlerInterceptor {
 
-    List<String> allowedIpAddresses = Arrays.asList("192.168.1.1", "127.0.0.1", "192.168.0.106"); // allowed IP addresses
+    // #TODO get allowed IP addresses from the configuration
+    List<String> allowedIpAddresses = Arrays.asList("192.168.3.8", "127.0.0.1", "192.168.0.106"); // allowed IP addresses
 
     @Override
-    public boolean preHandle(HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Object handler) {
-        log.info("IP Address: " + request.getRemoteAddr());
+    public boolean preHandle(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Object handler) {
+        log.info("IP Address: {}", request.getRemoteAddr());
         String ipAddress = request.getRemoteAddr();
         if (allowedIpAddresses.contains(ipAddress)) {
             return true;
         } else {
+            log.warn("Forbidden IP address: {}", ipAddress);
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return false;
         }

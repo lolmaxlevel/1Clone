@@ -30,7 +30,6 @@ public class JwtProvider {
 
     @Autowired
     public JwtProvider(@Value("${jwt.secret}") String secret, @Value("${jwt.refreshSecret}") String refreshSecret) {
-
         jwtAccessSecret = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
         jwtRefreshSecret = Keys.hmacShaKeyFor(Decoders.BASE64.decode(refreshSecret));
     }

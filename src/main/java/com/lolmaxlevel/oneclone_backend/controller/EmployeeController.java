@@ -54,7 +54,7 @@ public class EmployeeController {
     // example: http://localhost:5173/api/employee/all?page=0&size=10&sort=id,desc&surname=Ivanov&name=Ivan&workPosition=maid
     @GetMapping("/all")
     public Page<Employee> getAllEmployees(Pageable pageable, @RequestParam MultiValueMap<String, String> allParams) {
-        log.info("Get all employees request" + allParams);
+        log.info("Get all employees request{}", allParams);
         Specification<Employee> spec = Specification.where(null);
 
         for (Map.Entry<String, List<String>> entry : allParams.entrySet()) {
@@ -69,8 +69,8 @@ public class EmployeeController {
     }
 
     @PostMapping("/add")
-    public Employee addEmployee(Employee employee) {
-        log.info("Add employee request" + employee);
+    public Employee addEmployee(@RequestBody Employee employee) {
+        log.info("Add employee request{}", employee);
         return employeeRepository.save(employee);
     }
 
@@ -196,7 +196,6 @@ public class EmployeeController {
             return null;
         }
     }
-
 
 
 
