@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PlaceHoldersExtractor {
-    public static Map<String, String> getPlaceholders(Employee employee) {
+    public static Map<String, String> getPlaceholdersFromEmployee(Employee employee) {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("{{ NAME }}", employee.getName());
         placeholders.put("{{ SURNAME }}", employee.getSurname());
@@ -25,6 +25,14 @@ public class PlaceHoldersExtractor {
         placeholders.put("{{ NATIONALITY }}", employee.getNationality().getGenitiveName());
         placeholders.put("{{ FIRST_LETTER }}", employee.getName().substring(0, 1));
         placeholders.put("{{ FIRST_LETTER_S }}", employee.getSecondName().substring(0, 1));
+        return placeholders;
+    }
+    public static Map<String, String> getPlaceholdersFromDocument(Document document) {
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("{{ DATE_START }}", document.getDateFrom().toString());
+        placeholders.put("{{ DATE_END }}", document.getDateTo().toString());
+        placeholders.put("{{ COST }}", document.getPrice().toString());
+        placeholders.put("{{ DATE_START_FULL }}", document.getDateTo().toString());
         return placeholders;
     }
 }

@@ -24,7 +24,8 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPlaceholders;
+import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPlaceholdersFromEmployee;
+import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPlaceholdersFromDocument;
 
 
 @Slf4j // lombok annotation for logging
@@ -120,7 +121,7 @@ public class EmployeeController {
 
         // Fetch the employee
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
-        Map<String, String> placeholders = getPlaceholders(employee);
+        Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
 
         Document existingDocument;
         // If dates and price are provided, check if a document with these parameters already exists
@@ -181,7 +182,7 @@ public class EmployeeController {
 
         // Fetch the employee
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
-        Map<String, String> placeholders = getPlaceholders(employee);
+        Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
         long count = documentRepository.countByOwnerAndType(employee, documentType);
 
         Document document = new Document();
@@ -197,6 +198,8 @@ public class EmployeeController {
         placeholders.put("{{ DATE_START_FULL }}", document.getDateFrom().toString());
         placeholders.put("{{ DATE_END }}", document.getDateTo().toString());
         placeholders.put("{{ COST }}", document.getPrice().toString());
+        placeholders.put("{{ DOCUMENT_NUMBER }}", document.getName());
+
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
         // Generate the document
@@ -223,10 +226,9 @@ public class EmployeeController {
         log.info("Get exist document request id: {}", documentId);
         Document document = documentRepository.findById(documentId).orElseThrow(() -> new RuntimeException("Document not found"));
         Employee employee = document.getOwner();
-        Map<String, String> placeholders = getPlaceholders(employee);
-        placeholders.put("{{ DATE_START_FULL }}", document.getDateFrom().toString());
-        placeholders.put("{{ DATE_END }}", document.getDateTo().toString());
-        placeholders.put("{{ COST }}", document.getPrice().toString());
+        Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
+        placeholders.putAll(getPlaceholdersFromDocument(document));
+
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + document.getType() + "_" + employee.getCompanyType() + ".docx";
         byte[] doc = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
