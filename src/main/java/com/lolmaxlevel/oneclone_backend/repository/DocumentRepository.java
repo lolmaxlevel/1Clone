@@ -11,4 +11,6 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     Document findTopByOwnerAndTypeOrderByDateToDesc(Employee employee, ActType actType);
 
     Document findByOwnerAndTypeAndDateFromAndDateToAndPrice(Employee employee, ActType documentType, LocalDate dateFrom, LocalDate dateTo, Double price);
+
+    long countByOwnerAndType(Employee employee, ActType documentType);
 }

@@ -115,7 +115,7 @@ public class EmployeeController {
                                                    @RequestParam ActType documentType,
                                                    @RequestParam(required = false) LocalDate dateFrom,
                                                    @RequestParam(required = false) LocalDate dateTo,
-                                                   @RequestParam(required = false) Double price){
+                                                   @RequestParam(required = false) Double price) {
         log.info("Generate document request id: {} type: {}", employeeId, documentType);
 
         // Fetch the employee
@@ -129,7 +129,7 @@ public class EmployeeController {
             if (existingDocument == null) {
                 // If the document does not exist, create a new one
                 Document document = new Document();
-                document.setName(employeeId + "_" + documentType );
+                document.setName(employeeId + "_" + documentType);
                 document.setType(documentType);
                 document.setPrice(price);
                 document.setDateFrom(dateFrom);
@@ -146,7 +146,6 @@ public class EmployeeController {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
         }
-
         // If the document exists, use its data to generate the document
         placeholders.put("{{ DATE_START_FULL }}", existingDocument.getDateFrom().toString());
         placeholders.put("{{ DATE_END }}", existingDocument.getDateTo().toString());
@@ -171,8 +170,56 @@ public class EmployeeController {
             return null;
         }
     }
+
+    @GetMapping("/new-document")
+    public ResponseEntity<byte[]> newDocument(@RequestParam Long employeeId,
+                                              @RequestParam ActType documentType,
+                                              @RequestParam LocalDate dateFrom,
+                                              @RequestParam LocalDate dateTo,
+                                              @RequestParam Double price) {
+        log.info("Adding new document request id: {} type: {}", employeeId, documentType);
+
+        // Fetch the employee
+        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
+        Map<String, String> placeholders = getPlaceholders(employee);
+        long count = documentRepository.countByOwnerAndType(employee, documentType);
+
+        Document document = new Document();
+        document.setName(String.valueOf(count + 1));
+        document.setType(documentType);
+        document.setPrice(price);
+        document.setDateFrom(dateFrom);
+        document.setDateTo(dateTo);
+        document.setOwner(employee);
+        documentRepository.save(document);
+
+        // If the document exists, use its data to generate the document
+        placeholders.put("{{ DATE_START_FULL }}", document.getDateFrom().toString());
+        placeholders.put("{{ DATE_END }}", document.getDateTo().toString());
+        placeholders.put("{{ COST }}", document.getPrice().toString());
+
+        String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
+        // Generate the document
+        byte[] response = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
+        try {
+            // Return the document
+            HttpHeaders headers = new HttpHeaders();
+            String filename = employee.getSurname() + "_" + employee.getName() + "_" + documentType + ".docx";
+            filename = StringUtils.convertCyrilic(filename.toLowerCase());
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
+            //magic header for docx files
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(response);
+        } catch (Exception e) {
+            log.error("Error while generating document", e);
+            return null;
+        }
+    }
+
     @GetMapping("/get-exist-document")
-    public ResponseEntity<byte[]> getExistDocument(@RequestParam Long documentId){
+    public ResponseEntity<byte[]> getExistDocument(@RequestParam Long documentId) {
         log.info("Get exist document request id: {}", documentId);
         Document document = documentRepository.findById(documentId).orElseThrow(() -> new RuntimeException("Document not found"));
         Employee employee = document.getOwner();
@@ -196,7 +243,6 @@ public class EmployeeController {
             return null;
         }
     }
-
 
 
     @PatchMapping("/update")
