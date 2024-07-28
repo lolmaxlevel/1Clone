@@ -1,0 +1,2 @@
+to start simply use `docker compose up --build` instead of `docker-compose up --build` and the application will be available at http://localhost:8080.
+to build and push the image to the registry use `docker build -t ghcr.io/lolmaxlevel/1clone_backend .` and `docker push ghcr.io/lolmaxlevel/1clone_backend` respectively.
