@@ -6,20 +6,31 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-
 import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
 public class IpAddressInterceptor implements HandlerInterceptor {
 
-    // #TODO get allowed IP addresses from the configuration
-    List<String> allowedIpAddresses = Arrays.asList("192.168.3.8", "127.0.0.1", "192.168.0.106"); // allowed IP addresses
+    List<String> allowedIpAddresses;
+
+    public IpAddressInterceptor() {
+        String allowedIps = System.getenv("ALLOWED_IP_ADDRESSES");
+        log.info("Allowed IP addresses: {}", allowedIps);
+        if (allowedIps != null && !allowedIps.isEmpty()) {
+            allowedIpAddresses = Arrays.asList(allowedIps.split(","));
+        } else {
+            allowedIpAddresses = Arrays.asList("192.168.3.8", "127.0.0.1", "192.168.0.106"); // default IP addresses
+        }
+    }
 
     @Override
     public boolean preHandle(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Object handler) {
-        log.info("IP Address: {}", request.getRemoteAddr());
-        String ipAddress = request.getRemoteAddr();
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty()) {
+            ipAddress = request.getRemoteAddr();
+        }
+        log.info("IP Address: {}", ipAddress);
         if (allowedIpAddresses.contains(ipAddress)) {
             return true;
         } else {

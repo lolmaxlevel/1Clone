@@ -1,6 +1,5 @@
 package com.lolmaxlevel.oneclone_backend.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -17,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/excel")
+@RequestMapping("excel")
 public class ExcelController {
 
     private static final Logger log = LoggerFactory.getLogger(ExcelController.class);
@@ -57,22 +56,18 @@ public class ExcelController {
             String json = objectMapper.writeValueAsString(rowsData);
             return ResponseEntity.ok(json);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.warn("Error parsing Excel file", e);
             return ResponseEntity.badRequest().body(null);
         }
     }
 
     private String getCellValueAsString(Cell cell) {
         if (cell == null) return "";
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                return String.valueOf(cell.getNumericCellValue());
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            default:
-                return "";
-        }
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue();
+            case NUMERIC -> String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            default -> "";
+        };
     }
 }

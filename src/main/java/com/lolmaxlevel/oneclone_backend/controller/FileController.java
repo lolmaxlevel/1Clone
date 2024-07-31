@@ -16,8 +16,7 @@ import java.util.Objects;
 
 @Slf4j
 @RestController
-@RequestMapping("api/files")
-@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("files")
 class FileController {
 
     private final FileLocationService fileLocationService;

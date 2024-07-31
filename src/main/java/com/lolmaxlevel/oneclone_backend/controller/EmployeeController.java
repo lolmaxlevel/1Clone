@@ -30,7 +30,7 @@ import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPl
 
 @Slf4j // lombok annotation for logging
 @RestController
-@RequestMapping("/api/employee")
+@RequestMapping("employee")
 @CrossOrigin(origins = "http://localhost:5173")
 public class EmployeeController {
 

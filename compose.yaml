@@ -1,12 +1,4 @@
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Docker Compose reference guide at
-# https://docs.docker.com/go/compose-spec-reference/
-
-# Here the instructions define your application as a service called "server".
-# This service is built from the Dockerfile in the current directory.
-# You can add other services your application may depend on here, such as a
-# database or a cache. For examples, see the Awesome Compose repository:
-# https://github.com/docker/awesome-compose
+name: 1clone
 services:
   server:
     environment:
@@ -16,34 +8,68 @@ services:
       - LANGUAGE=en_US:en
       - LC_ALL=en_US.UTF-8
       - PATH=/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      - SPRING.DATASOURCE.USERNAME=ilusha
+      - SPRING.DATASOURCE.USERNAME=postgres
+      - SPRING.DATASOURCE.PASSWORD=2456
+      - SPRING.DATASOURCE.URL=jdbc:postgresql://db:5432/postgres
+      - ALLOWED_IP_ADDRESSES=192.168.3.8,127.0.0.1,192.168.0.106,172.18.0.1,172.18.0.5,localhost,127.0.0.1,localhost:80,localhost:8181
     image: ghcr.io/lolmaxlevel/1clone_backend:latest
+    #    build:
+    #      context: .
+    #      dockerfile: Dockerfile
     ports:
       - 8080:8080
     depends_on:
-       db:
-         condition: service_healthy
-  db:
-     image: postgres
-     restart: always
-     user: postgres
-     secrets:
-       - db-password
-     volumes:
-       - db-data:/var/lib/postgresql/data
-     environment:
-       - POSTGRES_DB=example
-       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-     expose:
-       - 5432
-     healthcheck:
-       test: [ "CMD", "pg_isready" ]
-       interval: 10s
-       timeout: 5s
-       retries: 5
-volumes:
-   db-data:
-secrets:
-   db-password:
-     file: db/password.txt
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
 
+  frontend:
+    image: ghcr.io/lolmaxlevel/1clone_frontend:latest
+    ports:
+      - 8181:80
+    depends_on:
+      - server
+    environment:
+      # should be 192.168.3.8/api
+      - MY_APP_API_URL=192.168.3.8/api
+    networks:
+      - app-network
+
+  db:
+    image: postgres
+    restart: always
+    user: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=2456
+      - POSTGRES_USER=postgres
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - server
+      - frontend
+    command: [ nginx-debug, '-g', 'daemon off;' ]
+    networks:
+      - app-network
+networks:
+  app-network:
+
+volumes:
+  db-data:
