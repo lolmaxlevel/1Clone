@@ -72,13 +72,13 @@ public class EmployeeController {
     @PostMapping("/add")
     public Employee addEmployee(@RequestBody Employee employee) {
         log.info("Add employee request{}", employee);
+        employee.setCompanySpecificId(generateCompanySpecificId(employee.getCompanyType()));
         return employeeRepository.save(employee);
     }
 
     @PostMapping("/add-random")
     public List<Employee> addRandomEmployees() {
         log.info("Add random employees request");
-        List<Employee> employees = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             Employee employee = new Employee();
             employee.setSurname("Surname" + i);
@@ -99,9 +99,15 @@ public class EmployeeController {
             employee.setWorkPosition(WorkPositionType.values()[ThreadLocalRandom.current().nextInt(WorkPositionType.values().length)]);
             employee.setOmvd("Omvd" + i);
             employee.setCompanyType(CompanyType.values()[ThreadLocalRandom.current().nextInt(CompanyType.values().length)]);
-            employees.add(employee);
+            employee.setCompanySpecificId(generateCompanySpecificId(employee.getCompanyType()));
+            employeeRepository.save(employee);
         }
-        return employeeRepository.saveAll(employees);
+        return employeeRepository.findAll();
+    }
+
+    private Long generateCompanySpecificId(CompanyType companyType) {
+        Long maxId = employeeRepository.findMaxCompanySpecificIdByCompanyType(companyType);
+        return (maxId == null ? 0 : maxId) + 1;
     }
 
     @PostMapping("/delete")
@@ -130,7 +136,7 @@ public class EmployeeController {
             if (existingDocument == null) {
                 // If the document does not exist, create a new one
                 Document document = new Document();
-                document.setName(employeeId + "_" + documentType);
+                document.setNumber(Math.toIntExact(employeeId));
                 document.setType(documentType);
                 document.setPrice(price);
                 document.setDateFrom(dateFrom);
@@ -186,7 +192,7 @@ public class EmployeeController {
         long count = documentRepository.countByOwnerAndType(employee, documentType);
 
         Document document = new Document();
-        document.setName(String.valueOf(count + 1));
+        document.setNumber(Integer.parseInt(String.valueOf(count + 1)));
         document.setType(documentType);
         document.setPrice(price);
         document.setDateFrom(dateFrom);
@@ -198,7 +204,7 @@ public class EmployeeController {
         placeholders.put("{{ DATE_START_FULL }}", document.getDateFrom().toString());
         placeholders.put("{{ DATE_END }}", document.getDateTo().toString());
         placeholders.put("{{ COST }}", document.getPrice().toString());
-        placeholders.put("{{ DOCUMENT_NUMBER }}", document.getName());
+        placeholders.put("{{ DOCUMENT_NUMBER }}", String.valueOf(document.getNumber()));
 
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";

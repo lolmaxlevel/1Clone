@@ -18,8 +18,8 @@ public class Document {
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(name = "name", nullable = false)
-    private String name;
+    @Column(name = "number", nullable = false)
+    private int number;
 
     @Column(name = "type", nullable = false)
     @Enumerated(EnumType.ORDINAL)

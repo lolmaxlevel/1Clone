@@ -28,6 +28,11 @@ public class WebConfig implements WebMvcConfigurer {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);
         String allowedIps = System.getenv("ALLOWED_IP_ADDRESSES");
+        config.addAllowedOrigin("192.168.3.8");
+        config.addAllowedOrigin("192.168.3.8:80");
+        config.addAllowedOrigin("localhost");
+        config.addAllowedOrigin("localhost:80");
+        config.addAllowedOrigin("127.0.0.1");
         if (allowedIps != null && !allowedIps.isEmpty()) {
             config.setAllowedOrigins(Arrays.asList(allowedIps.split(",")));
             log.info("Allowed IP addresses: {}", config.getAllowedOrigins());
