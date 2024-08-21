@@ -7,7 +7,10 @@ public enum WorkPositionType {
     maid("Горничная"),
     houseman("Хаусмен"),
     lobby("Лоббист"),
-    supervisor("Супервайзер");
+    supervisor("Супервайзер"),
+    coordinator("Координатор"),
+    laundry("Прачка"),
+    cook("Повар");
 
     private final String russianName;
 

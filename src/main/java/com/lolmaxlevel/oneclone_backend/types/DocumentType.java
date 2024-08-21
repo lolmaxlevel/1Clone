@@ -5,7 +5,7 @@ import lombok.Getter;
 @Getter
 public enum DocumentType {
     PASSPORT("Паспорт"),
-    ID("Удостоверение личности"),
+    ID("Удостовер. Личности"),
     OTHER("Иное");
 
     private final String name;
