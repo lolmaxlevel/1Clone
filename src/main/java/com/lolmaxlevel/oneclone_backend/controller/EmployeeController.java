@@ -31,7 +31,6 @@ import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPl
 @Slf4j // lombok annotation for logging
 @RestController
 @RequestMapping("employee")
-@CrossOrigin(origins = "http://localhost:5173")
 public class EmployeeController {
 
     private final String TEMPLATE_DIRECTORY_ROOT = "src/main/resources/document_templates/";
@@ -250,6 +249,12 @@ public class EmployeeController {
             log.error("Error while generating document", e);
             return null;
         }
+    }
+
+    @GetMapping("/objects")
+    public List<String> getWorkObjects() {
+        log.info("Get work objects request");
+        return employeeRepository.findDistinctWorkObject();
     }
 
 

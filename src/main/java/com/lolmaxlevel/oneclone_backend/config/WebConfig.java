@@ -33,12 +33,14 @@ public class WebConfig implements WebMvcConfigurer {
         config.addAllowedOrigin("localhost");
         config.addAllowedOrigin("localhost:80");
         config.addAllowedOrigin("127.0.0.1");
-        if (allowedIps != null && !allowedIps.isEmpty()) {
-            config.setAllowedOrigins(Arrays.asList(allowedIps.split(",")));
-            log.info("Allowed IP addresses: {}", config.getAllowedOrigins());
-        } else {
-            config.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:8080", "http://localhost:4200", "http://localhost:8081"));
-        }
+        config.addAllowedOrigin("http://192.168.3.8/");
+//        if (allowedIps != null && !allowedIps.isEmpty()) {
+//            config.setAllowedOrigins(Arrays.asList(allowedIps.split(",")));
+//            log.info("Allowed IP addresses: {}", config.getAllowedOrigins());
+//        } else {
+//            config.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:8080", "http://localhost:4200", "http://localhost:8081", "192.1"));
+//        }
+        log.info("Allowed IP addresses: {}", config.getAllowedOrigins());
         config.setAllowedHeaders(Arrays.asList(
                 HttpHeaders.AUTHORIZATION,
                 HttpHeaders.CONTENT_TYPE,

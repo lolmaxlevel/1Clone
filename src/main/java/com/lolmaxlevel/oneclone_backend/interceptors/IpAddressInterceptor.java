@@ -17,11 +17,11 @@ public class IpAddressInterceptor implements HandlerInterceptor {
     public IpAddressInterceptor() {
         String allowedIps = System.getenv("ALLOWED_IP_ADDRESSES");
         log.info("Allowed IP addresses: {}", allowedIps);
-        if (allowedIps != null && !allowedIps.isEmpty()) {
-            allowedIpAddresses = Arrays.asList(allowedIps.split(","));
-        } else {
-            allowedIpAddresses = Arrays.asList("192.168.3.8", "127.0.0.1", "192.168.0.106"); // default IP addresses
-        }
+//        if (allowedIps != null && !allowedIps.isEmpty()) {
+//            allowedIpAddresses = Arrays.asList(allowedIps.split(","));
+//        } else {
+        allowedIpAddresses = Arrays.asList("192.168.3.8", "127.0.0.1", "192.168.0.106"); // default IP addresses
+//        }
     }
 
     @Override
