@@ -2,6 +2,7 @@ package com.lolmaxlevel.oneclone_backend.utils;
 
 import com.lolmaxlevel.oneclone_backend.model.Document;
 import com.lolmaxlevel.oneclone_backend.model.Employee;
+import com.lolmaxlevel.oneclone_backend.types.DocumentType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,15 +19,17 @@ public class PlaceHoldersExtractor {
         placeholders.put("{{ ISSUED_BY }}", employee.getDocumentIssuedBy());
         placeholders.put("{{ ISSUE_DATE }}", employee.getDocumentIssuedDate().toString());
         placeholders.put("{{ INN }}", employee.getInn());
-        placeholders.put("{{ COST }}", "1000");
-        placeholders.put("{{ DOCUMENT_NUMBER }}", "123");
+        placeholders.put("{{ DOCUMENT_NUMBER }}", employee.getDocumentNumber());
         placeholders.put("{{ BANK_NUMBER }}", employee.getBankAccount());
-        placeholders.put("{{ DATE_START_FULL }}", "12.12.2021года");
         placeholders.put("{{ NATIONALITY }}", employee.getNationality().getGenitiveName());
         placeholders.put("{{ FIRST_LETTER }}", employee.getName().substring(0, 1));
         placeholders.put("{{ FIRST_LETTER_S }}", employee.getSecondName().substring(0, 1));
+        placeholders.put("{{ CONTRACT_NUMBER }}", employee.getCompanySpecificId() + "/2024");
+        placeholders.put("{{ DOCUMENT_TYPE }}", employee.getDocumentType().getName());
+        placeholders.put("{{ DOCUMENT_SERIES }}", employee.getDocumentSeries());
         return placeholders;
     }
+
     public static Map<String, String> getPlaceholdersFromDocument(Document document) {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("{{ DATE_START }}", document.getDateFrom().toString());
