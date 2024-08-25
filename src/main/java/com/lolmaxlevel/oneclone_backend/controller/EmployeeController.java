@@ -7,6 +7,7 @@ import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
 import com.lolmaxlevel.oneclone_backend.service.WordDocumentGenerator;
 import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
 import com.lolmaxlevel.oneclone_backend.types.*;
+import com.lolmaxlevel.oneclone_backend.utils.DateUtils;
 import com.lolmaxlevel.oneclone_backend.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -153,9 +154,14 @@ public class EmployeeController {
             }
         }
         // If the document exists, use its data to generate the document
-        placeholders.put("{{ DATE_START_FULL }}", existingDocument.getDateFrom().toString());
-        placeholders.put("{{ DATE_END }}", existingDocument.getDateTo().toString());
-        placeholders.put("{{ COST }}", existingDocument.getPrice().toString());
+        placeholders.putAll(getPlaceholdersFromDocument(existingDocument));
+        // if document type is additional, add additional placeholder of main contract date
+        if (documentType == ActType.ADDITIONAL) {
+            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
+            if (mainContract != null) {
+                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
+            }
+        }
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
         // Generate the document
@@ -200,11 +206,14 @@ public class EmployeeController {
         documentRepository.save(document);
 
         // If the document exists, use its data to generate the document
-        placeholders.put("{{ DATE_START_FULL }}", document.getDateFrom().toString());
-        placeholders.put("{{ DATE_END }}", document.getDateTo().toString());
-        placeholders.put("{{ COST }}", document.getPrice().toString());
-        placeholders.put("{{ DOCUMENT_NUMBER }}", String.valueOf(document.getNumber()));
-
+        placeholders.putAll(getPlaceholdersFromDocument(document));
+        // if document type is additional, add additional placeholder of main contract date
+        if (documentType == ActType.ADDITIONAL) {
+            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
+            if (mainContract != null) {
+                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
+            }
+        }
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
         // Generate the document
@@ -233,7 +242,13 @@ public class EmployeeController {
         Employee employee = document.getOwner();
         Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
         placeholders.putAll(getPlaceholdersFromDocument(document));
-
+                // if document type is additional, add additional placeholder of main contract date
+        if (document.getType() == ActType.ADDITIONAL) {
+            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
+            if (mainContract != null) {
+                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
+            }
+        }
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + document.getType() + "_" + employee.getCompanyType() + ".docx";
         byte[] doc = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
