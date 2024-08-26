@@ -8,19 +8,17 @@ import com.lolmaxlevel.oneclone_backend.service.WordDocumentGenerator;
 import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
 import com.lolmaxlevel.oneclone_backend.types.*;
 import com.lolmaxlevel.oneclone_backend.utils.DateUtils;
-import com.lolmaxlevel.oneclone_backend.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 
-
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -28,19 +26,16 @@ import java.util.concurrent.ThreadLocalRandom;
 import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPlaceholdersFromEmployee;
 import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPlaceholdersFromDocument;
 
-
-@Slf4j // lombok annotation for logging
+@Slf4j
 @RestController
 @RequestMapping("employee")
 public class EmployeeController {
 
     private final String TEMPLATE_DIRECTORY_ROOT = "src/main/resources/document_templates/";
 
-
     private final EmployeeRepository employeeRepository;
     private final WordDocumentGenerator wordDocumentGenerator;
     private final DocumentRepository documentRepository;
-
 
     public EmployeeController(EmployeeRepository employeeRepository,
                               WordDocumentGenerator wordDocumentGenerator,
@@ -50,9 +45,67 @@ public class EmployeeController {
         this.documentRepository = documentRepository;
     }
 
+    private Employee getEmployeeById(Long employeeId) {
+        return employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
+    }
 
-    // Get all employees with pagination and filtering
-    // example: http://localhost:5173/api/employee/all?page=0&size=10&sort=id,desc&surname=Ivanov&name=Ivan&workPosition=maid
+    private HttpHeaders generateHeaders(String name, String surname, ActType documentType, Long companySpecificId) {
+        HttpHeaders headers = new HttpHeaders();
+        String filename = "";
+        switch (documentType) {
+            case CONTRACT:
+                break;
+            case ADDITIONAL:
+                filename += "Доп.соглашение к договору ";
+                break;
+            default:
+                throw new RuntimeException("Document type not found");
+        }
+        filename += "№" + companySpecificId + "-2024" + " " + surname + " " + name + ".docx";
+        // encode filename to support cyrillic characters
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
+        log.info("Generated filename: {}", encodedFilename);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + encodedFilename);
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        return headers;
+    }
+
+    private Document getOrCreateDocument(Employee employee, ActType documentType, LocalDate dateFrom, LocalDate dateTo, Double price) {
+        Document existingDocument;
+        if (dateFrom != null && dateTo != null && price != null) {
+            existingDocument = documentRepository.findByOwnerAndTypeAndDateFromAndDateToAndPrice(employee, documentType, dateFrom, dateTo, price);
+            if (existingDocument == null) {
+                Document document = new Document();
+                document.setNumber(Math.toIntExact(employee.getId()));
+                document.setType(documentType);
+                document.setPrice(price);
+                document.setDateFrom(dateFrom);
+                document.setDateTo(dateTo);
+                document.setOwner(employee);
+                documentRepository.save(document);
+                existingDocument = document;
+            }
+        } else {
+            existingDocument = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, documentType);
+            if (existingDocument == null) {
+                throw new RuntimeException("Document not found");
+            }
+        }
+        return existingDocument;
+    }
+
+    private Map<String, String> fillPlaceholders(Employee employee, Document document, ActType documentType) {
+        Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
+        placeholders.putAll(getPlaceholdersFromDocument(document));
+        if (documentType == ActType.ADDITIONAL) {
+            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
+            if (mainContract != null) {
+                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
+            }
+        }
+        return placeholders;
+    }
+
     @GetMapping("/all")
     public Page<Employee> getAllEmployees(Pageable pageable, @RequestParam MultiValueMap<String, String> allParams) {
         log.info("Get all employees request{}", allParams);
@@ -112,7 +165,7 @@ public class EmployeeController {
 
     @PostMapping("/delete")
     public String deleteEmployee(@RequestParam Long id) {
-        log.info("Delete employee request " + id);
+        log.info("Delete employee request {}", id);
         employeeRepository.deleteById(id);
         return "Deleted";
     }
@@ -125,58 +178,17 @@ public class EmployeeController {
                                                    @RequestParam(required = false) Double price) {
         log.info("Generate document request id: {} type: {}", employeeId, documentType);
 
-        // Fetch the employee
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
-        Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
-
-        Document existingDocument;
-        // If dates and price are provided, check if a document with these parameters already exists
-        if (dateFrom != null && dateTo != null && price != null) {
-            existingDocument = documentRepository.findByOwnerAndTypeAndDateFromAndDateToAndPrice(employee, documentType, dateFrom, dateTo, price);
-            if (existingDocument == null) {
-                // If the document does not exist, create a new one
-                Document document = new Document();
-                document.setNumber(Math.toIntExact(employeeId));
-                document.setType(documentType);
-                document.setPrice(price);
-                document.setDateFrom(dateFrom);
-                document.setDateTo(dateTo);
-                document.setOwner(employee);
-                documentRepository.save(document);
-                existingDocument = document;
-            }
-        } else {
-            // If any of the non-required parameters are empty, return the latest document of the specified type and employee
-            existingDocument = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, documentType);
-            if (existingDocument == null) {
-                // If no such document exists, return an error
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-        }
-        // If the document exists, use its data to generate the document
-        placeholders.putAll(getPlaceholdersFromDocument(existingDocument));
-        // if document type is additional, add additional placeholder of main contract date
-        if (documentType == ActType.ADDITIONAL) {
-            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
-            if (mainContract != null) {
-                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
-            }
-        }
+        Employee employee = getEmployeeById(employeeId);
+        Document document = getOrCreateDocument(employee, documentType, dateFrom, dateTo, price);
+        Map<String, String> placeholders = fillPlaceholders(employee, document, documentType);
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
-        // Generate the document
-        byte[] document = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
+        byte[] doc = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
-            // Return the document
-            HttpHeaders headers = new HttpHeaders();
-            String filename = employee.getSurname() + "_" + employee.getName() + "_" + documentType + ".docx";
-            filename = StringUtils.convertCyrilic(filename.toLowerCase());
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
-            //magic header for docx files
-            headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            HttpHeaders headers = generateHeaders(employee.getName(), employee.getSurname(), documentType, employee.getCompanySpecificId());
             return ResponseEntity.ok()
                     .headers(headers)
-                    .body(document);
+                    .body(doc);
         } catch (Exception e) {
             log.error("Error while generating document", e);
             return null;
@@ -191,13 +203,9 @@ public class EmployeeController {
                                               @RequestParam Double price) {
         log.info("Adding new document request id: {} type: {}", employeeId, documentType);
 
-        // Fetch the employee
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("Employee not found"));
-        Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
-        long count = documentRepository.countByOwnerAndType(employee, documentType);
-
+        Employee employee = getEmployeeById(employeeId);
         Document document = new Document();
-        document.setNumber(Integer.parseInt(String.valueOf(count + 1)));
+        document.setNumber(Integer.parseInt(String.valueOf(documentRepository.countByOwnerAndType(employee, documentType) + 1)));
         document.setType(documentType);
         document.setPrice(price);
         document.setDateFrom(dateFrom);
@@ -205,27 +213,12 @@ public class EmployeeController {
         document.setOwner(employee);
         documentRepository.save(document);
 
-        // If the document exists, use its data to generate the document
-        placeholders.putAll(getPlaceholdersFromDocument(document));
-        // if document type is additional, add additional placeholder of main contract date
-        if (documentType == ActType.ADDITIONAL) {
-            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
-            if (mainContract != null) {
-                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
-            }
-        }
+        Map<String, String> placeholders = fillPlaceholders(employee, document, documentType);
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
-        // Generate the document
         byte[] response = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
-            // Return the document
-            HttpHeaders headers = new HttpHeaders();
-            String filename = employee.getSurname() + "_" + employee.getName() + "_" + documentType + ".docx";
-            filename = StringUtils.convertCyrilic(filename.toLowerCase());
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
-            //magic header for docx files
-            headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            HttpHeaders headers = generateHeaders(employee.getName(), employee.getSurname(), documentType, employee.getCompanySpecificId());
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(response);
@@ -240,23 +233,12 @@ public class EmployeeController {
         log.info("Get exist document request id: {}", documentId);
         Document document = documentRepository.findById(documentId).orElseThrow(() -> new RuntimeException("Document not found"));
         Employee employee = document.getOwner();
-        Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
-        placeholders.putAll(getPlaceholdersFromDocument(document));
-                // if document type is additional, add additional placeholder of main contract date
-        if (document.getType() == ActType.ADDITIONAL) {
-            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
-            if (mainContract != null) {
-                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
-            }
-        }
+        Map<String, String> placeholders = fillPlaceholders(employee, document, document.getType());
+
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + document.getType() + "_" + employee.getCompanyType() + ".docx";
         byte[] doc = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            String filename = employee.getSurname() + "_" + employee.getName() + "_" + document.getType() + ".docx";
-            filename = StringUtils.convertCyrilic(filename.toLowerCase());
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
-            headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            HttpHeaders headers = generateHeaders(employee.getName(), employee.getSurname(), document.getType(), employee.getCompanySpecificId());
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(doc);
@@ -271,7 +253,6 @@ public class EmployeeController {
         log.info("Get work objects request");
         return employeeRepository.findDistinctWorkObject();
     }
-
 
     @PatchMapping("/update")
     public Employee updateEmployee(@RequestParam String id, @RequestParam String field, @RequestParam String value) {
