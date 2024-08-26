@@ -58,13 +58,15 @@ public class EmployeeController {
             case ADDITIONAL:
                 filename += "Доп.соглашение к договору ";
                 break;
+            case APPENDIX:
+                filename += "Приложение к договору ";
+                break;
             default:
                 throw new RuntimeException("Document type not found");
         }
         filename += "№" + companySpecificId + "-2024" + " " + surname + " " + name + ".docx";
         // encode filename to support cyrillic characters
         String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
-        log.info("Generated filename: {}", encodedFilename);
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + encodedFilename);
         headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         return headers;
@@ -86,7 +88,11 @@ public class EmployeeController {
                 existingDocument = document;
             }
         } else {
-            existingDocument = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, documentType);
+            if (documentType == ActType.APPENDIX) {
+                existingDocument = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
+            } else {
+                existingDocument = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, documentType);
+            }
             if (existingDocument == null) {
                 throw new RuntimeException("Document not found");
             }
@@ -97,7 +103,7 @@ public class EmployeeController {
     private Map<String, String> fillPlaceholders(Employee employee, Document document, ActType documentType) {
         Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
         placeholders.putAll(getPlaceholdersFromDocument(document));
-        if (documentType == ActType.ADDITIONAL) {
+        if (documentType == ActType.ADDITIONAL || documentType == ActType.APPENDIX) {
             Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
             if (mainContract != null) {
                 placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
