@@ -201,39 +201,6 @@ public class EmployeeController {
         }
     }
 
-    @GetMapping("/new-document")
-    public ResponseEntity<byte[]> newDocument(@RequestParam Long employeeId,
-                                              @RequestParam ActType documentType,
-                                              @RequestParam LocalDate dateFrom,
-                                              @RequestParam LocalDate dateTo,
-                                              @RequestParam Double price) {
-        log.info("Adding new document request id: {} type: {}", employeeId, documentType);
-
-        Employee employee = getEmployeeById(employeeId);
-        Document document = new Document();
-        document.setNumber(Integer.parseInt(String.valueOf(documentRepository.countByOwnerAndType(employee, documentType) + 1)));
-        document.setType(documentType);
-        document.setPrice(price);
-        document.setDateFrom(dateFrom);
-        document.setDateTo(dateTo);
-        document.setOwner(employee);
-        documentRepository.save(document);
-
-        Map<String, String> placeholders = fillPlaceholders(employee, document, documentType);
-
-        String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
-        byte[] response = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
-        try {
-            HttpHeaders headers = generateHeaders(employee.getName(), employee.getSurname(), documentType, employee.getCompanySpecificId());
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(response);
-        } catch (Exception e) {
-            log.error("Error while generating document", e);
-            return null;
-        }
-    }
-
     @GetMapping("/get-exist-document")
     public ResponseEntity<byte[]> getExistDocument(@RequestParam Long documentId) {
         log.info("Get exist document request id: {}", documentId);
