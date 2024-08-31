@@ -2,7 +2,8 @@ package com.lolmaxlevel.oneclone_backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lolmaxlevel.oneclone_backend.model.Employee;
-import com.lolmaxlevel.oneclone_backend.service.EmployeeService;
+import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
+import com.lolmaxlevel.oneclone_backend.types.CompanyType;
 import com.lolmaxlevel.oneclone_backend.types.CountryType;
 import com.lolmaxlevel.oneclone_backend.types.DocumentType;
 import com.lolmaxlevel.oneclone_backend.types.WorkPositionType;
@@ -27,7 +28,11 @@ public class ExcelController {
 
     private static final Logger log = LoggerFactory.getLogger(ExcelController.class);
 
-    EmployeeService employeeService;
+    private final EmployeeRepository employeeRepository;
+
+    public ExcelController(EmployeeRepository employeeRepository) {
+        this.employeeRepository = employeeRepository;
+    }
 
     @PostMapping("/parse")
     public ResponseEntity<String> parseExcelFileToJson(@RequestParam("file") MultipartFile file) {
@@ -83,6 +88,12 @@ public class ExcelController {
                 }
             }
             case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            case FORMULA -> switch (cell.getCachedFormulaResultType()) {
+                case STRING -> cell.getStringCellValue();
+                case NUMERIC -> String.valueOf(cell.getNumericCellValue());
+                case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+                default -> "";
+            };
             default -> "";
         };
     }
@@ -105,13 +116,18 @@ public class ExcelController {
                 Row row = sheet.getRow(rowNum);
                 Employee employee = new Employee();
                 boolean hasMissingData = false;
+                List<String> missingData = new ArrayList<>();
 
                 for (int cellNum = 0; cellNum < headers.size(); cellNum++) {
                     if (cellNum < row.getLastCellNum()) {
                         Cell cell = row.getCell(cellNum);
                         String cellValue = getCellValueAsString(cell);
                         if (cellValue == null || cellValue.isEmpty()) {
+                            if ("Отчество".equals(headers.get(cellNum)) || "ОМВД".equals(headers.get(cellNum))) {
+                                continue; // Пропускаем установку отчества и ОМВД, если они пустые
+                            }
                             hasMissingData = true;
+                            missingData.add(headers.get(cellNum));
                             break;
                         }
                         switch (headers.get(cellNum)) {
@@ -135,15 +151,18 @@ public class ExcelController {
                             case "Адрес объекта" -> employee.setWorkAddress(cellValue);
                             case "Должность" ->
                                     employee.setWorkPosition(findEnumByRussianNameIgnoreCase(WorkPositionType.class, cellValue));
+                            case "ОМВД" -> employee.setOmvd(cellValue);
                         }
+                        employee.setCompanyType(CompanyType.AM);
                     } else {
                         hasMissingData = true;
+                        missingData.add(headers.get(cellNum));
                         break;
                     }
                 }
 
                 if (hasMissingData) {
-                    log.warn("Skipping row {} due to missing data", rowNum);
+                    log.warn("Skipping row {} due to missing data: {}", rowNum, String.join(", ", missingData));
                     continue;
                 }
 
@@ -152,13 +171,14 @@ public class ExcelController {
             }
 
             // Сохранение сотрудников в базу данных
-            employeeService.saveAll(employees);
+            employeeRepository.saveAll(employees);
             return ResponseEntity.ok("Employees uploaded successfully");
         } catch (Exception e) {
             log.warn("Error uploading employees from Excel file", e);
             return ResponseEntity.badRequest().body("Error uploading employees");
         }
     }
+
 
     private <T extends Enum<T>> T findEnumByNameIgnoreCase(Class<T> enumClass, String value) {
         for (T enumConstant : enumClass.getEnumConstants()) {

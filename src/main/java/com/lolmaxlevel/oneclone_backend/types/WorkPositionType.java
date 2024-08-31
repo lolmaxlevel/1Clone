@@ -6,11 +6,16 @@ import lombok.Getter;
 public enum WorkPositionType {
     maid("Горничная"),
     houseman("Хаусмен"),
+    janitor("Дворник"),
     lobby("Лоббист"),
     supervisor("Супервайзер"),
     coordinator("Координатор"),
     laundry("Прачка"),
-    cook("Повар");
+    cook("Повар"),
+    waiter("Официант"),
+    bellboy("Беллман"),
+    cleaner("Уборщик"),
+    ;
 
     private final String russianName;
 
@@ -19,4 +24,4 @@ public enum WorkPositionType {
     }
 
 
-}
+    }

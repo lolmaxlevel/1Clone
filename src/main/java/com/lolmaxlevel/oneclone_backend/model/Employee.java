@@ -72,7 +72,6 @@ public class Employee {
     @Nonnull
     private WorkPositionType workPosition;
 
-    @Nonnull
     private String omvd;
 
     @Nonnull
