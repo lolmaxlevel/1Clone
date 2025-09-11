@@ -161,7 +161,7 @@
                 <artifactId>dependency-check-maven</artifactId>
                 <version>12.1.3</version>
                 <configuration>
-                    <format>XML</format>
+                    <format>JSON</format>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
                 </configuration>
