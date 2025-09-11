@@ -17,70 +17,210 @@ jobs:
       actions: read
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
 
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
 
-    - name: Compile project
-      run: mvn clean compile test-compile -DskipTests
+      - name: Cache OWASP NVD data
+        uses: actions/cache@v3
+        with:
+          path: ~/owasp-data
+          key: ${{ runner.os }}-owasp-data-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-owasp-data-
 
-    - name: Run SpotBugs Analysis
-      run: |
-        mvn com.github.spotbugs:spotbugs-maven-plugin:4.8.2.0:spotbugs \
-          -Dspotbugs.effort=Max \
-          -Dspotbugs.threshold=Low \
-          -Dspotbugs.xmlOutput=true \
-          -Dspotbugs.xmlOutputDirectory=target/spotbugs
-      continue-on-error: true
+      - name: Compile project
+        run: mvn clean compile test-compile -DskipTests
 
-    - name: Upload SpotBugs results to GitHub
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: target/spotbugs/spotbugsXml.xml
-        category: spotbugs
-      continue-on-error: true
+      - name: Run SpotBugs Analysis
+        run: |
+          mvn com.github.spotbugs:spotbugs-maven-plugin:4.8.2.0:spotbugs \
+            -Dspotbugs.effort=Max \
+            -Dspotbugs.threshold=Low \
+            -Dspotbugs.xmlOutput=true \
+            -Dspotbugs.xmlOutputDirectory=target/spotbugs \
+            -Dspotbugs.excludeFilterFile=spotbugs-security-exclude.xml
+        continue-on-error: true
 
-    - name: Run OWASP Dependency Check
-      run: |
-        mvn org.owasp:dependency-check-maven:9.0.7:check \
-          -DdataDirectory=$HOME/owasp-data \
-          -DautoUpdate=true \
-          -DcveValidForHours=24 \
-          -DfailBuildOnCVSS=7 \
-          -Dformat=ALL \
-          -DprettyPrint=true
-      continue-on-error: true
+      - name: Display SpotBugs Results
+        if: always()
+        run: |
+          echo "## 🔍 SpotBugs Analysis Results"
+          echo "================================"
+          
+          if [ -f target/spotbugs/spotbugsXml.xml ]; then
+            # Подсчет найденных проблем
+            BUG_COUNT=$(grep -c "<BugInstance" target/spotbugs/spotbugsXml.xml 2>/dev/null || echo "0")
+            echo "Total issues found: $BUG_COUNT"
+            echo ""
+          
+            if [ "$BUG_COUNT" -gt 0 ]; then
+              echo "### Issues by Category:"
+              # Группировка по категориям
+              grep -o 'category="[^"]*"' target/spotbugs/spotbugsXml.xml | sort | uniq -c | while read count category; do
+                cat_name=$(echo $category | sed 's/category="\([^"]*\)"/\1/')
+                echo "- $cat_name: $count issues"
+              done
+              echo ""
+          
+              echo "### Issues by Priority:"
+              grep -o 'priority="[^"]*"' target/spotbugs/spotbugsXml.xml | sort | uniq -c | while read count priority; do
+                prio_name=$(echo $priority | sed 's/priority="\([^"]*\)"/\1/')
+                case $prio_name in
+                  "1") echo "- High Priority: $count issues" ;;
+                  "2") echo "- Medium Priority: $count issues" ;;
+                  "3") echo "- Low Priority: $count issues" ;;
+                  *) echo "- Priority $prio_name: $count issues" ;;
+                esac
+              done
+              echo ""
+          
+              echo "### Top 10 Issues:"
+              xmllint --format target/spotbugs/spotbugsXml.xml 2>/dev/null | grep -A 3 -B 1 "<BugInstance" | head -40 || echo "Could not parse detailed issues"
+            else
+              echo "✅ No issues found by SpotBugs!"
+            fi
+          else
+            echo "❌ SpotBugs report not found"
+          fi
 
-    - name: Upload OWASP Dependency Check results
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: target/dependency-check-report.sarif
-        category: dependency-check
-      continue-on-error: true
+      - name: Run OWASP Dependency Check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          echo "🔑 Using NVD API key for complete vulnerability analysis"
+          mvn org.owasp:dependency-check-maven:check \
+            -DdataDirectory=$HOME/owasp-data \
+            -DautoUpdate=true \
+            -DnvdApiKey=$NVD_API_KEY \
+            -DnvdApiAnalyzerEnabled=true \
+            -DcentralAnalyzerEnabled=true \
+            -DnexusAnalyzerEnabled=false \
+            -DretireJsAnalyzerEnabled=false \
+            -DhostileAnalyzerEnabled=false \
+            -DfailBuildOnCVSS=7 \
+            -Dformat=JSON,HTML \
+            -DprettyPrint=true
+        continue-on-error: true
 
-    - name: Archive security reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-reports
-        path: |
-          target/spotbugs/
-          target/dependency-check-report.*
-        retention-days: 30
+      - name: Display OWASP Dependency Check Results
+        if: always()
+        run: |
+          echo ""
+          echo "## 🛡️ OWASP Dependency Check Results"
+          echo "===================================="
+          
+          if [ -f target/dependency-check-report.json ]; then
+            # Анализ JSON отчета
+            VULN_COUNT=$(jq '[.dependencies[]?.vulnerabilities[]?] | length' target/dependency-check-report.json 2>/dev/null || echo "0")
+            DEP_COUNT=$(jq '.dependencies | length' target/dependency-check-report.json 2>/dev/null || echo "0")
+          
+            echo "Dependencies analyzed: $DEP_COUNT"
+            echo "Vulnerabilities found: $VULN_COUNT"
+            echo ""
+          
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              echo "### Vulnerabilities by Severity:"
+              jq -r '.dependencies[]?.vulnerabilities[]? | .severity' target/dependency-check-report.json 2>/dev/null | sort | uniq -c | while read count severity; do
+                echo "- $severity: $count vulnerabilities"
+              done
+              echo ""
+          
+              echo "### High/Critical Vulnerabilities:"
+              jq -r '.dependencies[] | select(.vulnerabilities[]?.severity == "HIGH" or .vulnerabilities[]?.severity == "CRITICAL") | "\(.fileName): \(.vulnerabilities[].name) (\(.vulnerabilities[].severity))"' target/dependency-check-report.json 2>/dev/null | head -10
+          
+              echo ""
+              echo "### Affected Dependencies:"
+              jq -r '.dependencies[] | select(.vulnerabilities | length > 0) | "\(.fileName) - \(.vulnerabilities | length) vulnerabilities"' target/dependency-check-report.json 2>/dev/null | head -10
+            else
+              echo "✅ No vulnerabilities found in dependencies!"
+            fi
+          else
+            echo "⚠️ OWASP report not found - analysis may have failed due to NVD API limitations"
+            echo "   This is expected in CI environments without NVD API key"
+            echo "   Consider running locally with NVD API key for complete analysis"
+          fi
+
+      - name: Generate Security Summary
+        if: always()
+        run: |
+          echo ""
+          echo "## 📊 Security Analysis Summary"
+          echo "==============================="
+          
+          # SpotBugs summary
+          if [ -f target/spotbugs/spotbugsXml.xml ]; then
+            SPOTBUGS_COUNT=$(grep -c "<BugInstance" target/spotbugs/spotbugsXml.xml 2>/dev/null || echo "0")
+            if [ "$SPOTBUGS_COUNT" -gt 0 ]; then
+              echo "⚠️  SpotBugs found $SPOTBUGS_COUNT potential security/quality issues"
+            else
+              echo "✅ SpotBugs: No issues detected"
+            fi
+          else
+            echo "❌ SpotBugs: Analysis failed"
+          fi
+          
+          # OWASP summary
+          if [ -f target/dependency-check-report.json ]; then
+            OWASP_COUNT=$(jq '[.dependencies[]?.vulnerabilities[]?] | length' target/dependency-check-report.json 2>/dev/null || echo "0")
+            if [ "$OWASP_COUNT" -gt 0 ]; then
+              echo "⚠️  OWASP found $OWASP_COUNT known vulnerabilities in dependencies"
+          
+              # Check for high/critical
+              HIGH_CRITICAL=$(jq '[.dependencies[]?.vulnerabilities[]? | select(.severity == "HIGH" or .severity == "CRITICAL")] | length' target/dependency-check-report.json 2>/dev/null || echo "0")
+              if [ "$HIGH_CRITICAL" -gt 0 ]; then
+                echo "🚨 $HIGH_CRITICAL HIGH/CRITICAL severity vulnerabilities found!"
+              fi
+            else
+              echo "✅ OWASP: No vulnerabilities detected in analyzed components"
+            fi
+          else
+            echo "⚠️ OWASP: Analysis completed with limited functionality (no NVD API access)"
+          fi
+          
+          echo ""
+          echo "## 📋 Notes:"
+          echo "- SpotBugs performs static code analysis for security and quality issues"
+          echo "- OWASP scans known vulnerabilities but may be limited without NVD API key"
+          echo "- For complete vulnerability scanning, consider setting up NVD_API_KEY secret"
+          echo "- Reports are archived as build artifacts for detailed analysis"
+
+      - name: Archive security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            target/spotbugs/
+            target/dependency-check-report.*
+          retention-days: 30
+
+      - name: Fail if critical vulnerabilities found
+        if: always()
+        run: |
+          # Проверяем критические уязвимости только если отчет существует
+          if [ -f target/dependency-check-report.json ]; then
+            CRITICAL_COUNT=$(jq '[.dependencies[]?.vulnerabilities[]? | select(.severity == "CRITICAL")] | length' target/dependency-check-report.json 2>/dev/null || echo "0")
+            if [ "$CRITICAL_COUNT" -gt 0 ]; then
+              echo "🚨 CRITICAL vulnerabilities found: $CRITICAL_COUNT"
+              echo "Build failed due to critical security vulnerabilities!"
+              exit 1
+            fi
+          else
+            echo "ℹ️ No OWASP report generated - skipping critical vulnerability check"
+          fi

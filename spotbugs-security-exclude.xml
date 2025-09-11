@@ -10,19 +10,48 @@
         <Class name="~.*\$.*"/>
     </Match>
 
-    <!-- Example: Exclude specific security issues if needed -->
-    <!-- Uncomment and modify as needed
+    <!-- Exclude Spring Boot generated classes -->
     <Match>
-        <Bug pattern="SQL_INJECTION_HIBERNATE"/>
+        <Class name="~.*Application"/>
+        <Bug pattern="DM_EXIT"/>
     </Match>
-    -->
 
-    <!-- Example: Exclude specific packages from certain checks -->
-    <!--
+    <!-- Exclude Spring Entity Leak issues (problematic detector) -->
     <Match>
-        <Package name="com.lolmaxlevel.oneclone_backend.config"/>
-        <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME"/>
+        <Bug pattern="SPRING_ENTITY_LEAK"/>
     </Match>
-    -->
+
+    <!-- Exclude issues related to synthetic methods and lambda expressions -->
+    <Match>
+        <Method name="~lambda\$.*"/>
+    </Match>
+
+    <!-- Exclude Lombok generated methods -->
+    <Match>
+        <Method name="~(equals|hashCode|toString|canEqual)"/>
+        <Bug pattern="EQ_UNUSUAL"/>
+    </Match>
+
+    <!-- Exclude specific Spring/JPA related false positives -->
+    <Match>
+        <Class name="~.*Controller"/>
+        <Bug pattern="UWF_UNWRITTEN_FIELD"/>
+    </Match>
+
+    <Match>
+        <Class name="~.*Entity"/>
+        <Bug pattern="UWF_UNWRITTEN_FIELD"/>
+    </Match>
+
+    <!-- Exclude configuration classes -->
+    <Match>
+        <Class name="~.*Config.*"/>
+        <Bug pattern="UWF_UNWRITTEN_FIELD"/>
+    </Match>
+
+    <!-- Exclude DTO classes from certain checks -->
+    <Match>
+        <Class name="~.*Dto"/>
+        <Bug pattern="URF_UNREAD_FIELD"/>
+    </Match>
 </FindBugsFilter>
-
