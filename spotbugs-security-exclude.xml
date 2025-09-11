@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exclude test files from analysis -->
+    <Match>
+        <Class name="~.*Test.*"/>
+    </Match>
+
+    <!-- Exclude generated files -->
+    <Match>
+        <Class name="~.*\$.*"/>
+    </Match>
+
+    <!-- Example: Exclude specific security issues if needed -->
+    <!-- Uncomment and modify as needed
+    <Match>
+        <Bug pattern="SQL_INJECTION_HIBERNATE"/>
+    </Match>
+    -->
+
+    <!-- Example: Exclude specific packages from certain checks -->
+    <!--
+    <Match>
+        <Package name="com.lolmaxlevel.oneclone_backend.config"/>
+        <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME"/>
+    </Match>
+    -->
+</FindBugsFilter>
+
