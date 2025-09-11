@@ -13,4 +13,6 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     Document findByOwnerAndTypeAndDateFromAndDateToAndPrice(Employee employee, ActType documentType, LocalDate dateFrom, LocalDate dateTo, Double price);
 
     long countByOwnerAndType(Employee employee, ActType documentType);
+
+    int countByOwnerAndTypeAndArchive(Employee owner, ActType type, boolean archive);
 }

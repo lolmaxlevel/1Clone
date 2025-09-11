@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -15,8 +14,6 @@ import java.util.Map;
 @Service
 @Slf4j
 public class WordDocumentGenerator {
-
-    private static final String TEMPLATE_DIRECTORY_ROOT = "TEMPLATES_DIRECTORY/";
 
     public byte[] generateFromTemplate(String templateName, Map<String, String> placeholders) {
 
@@ -51,34 +48,77 @@ public class WordDocumentGenerator {
     }
 
     private void handlePlaceholdersInRuns(List<XWPFRun> runs, Map<String, String> placeholders) {
-        int start = 0;
-        int end = 0;
-        StringBuilder sb = new StringBuilder();
-        boolean isPlaceholder = false;
-        for (int i = 0; i < runs.size(); i++) {
-            XWPFRun run = runs.get(i);
-            String text = run.getText(0);
-            if (text != null) {
-                if (text.contains("{")) {
-                    isPlaceholder = true;
-                }
-                if (isPlaceholder) {
-                    sb.append(text);
-                    run.setText("", 0);
-                }
-                if (text.contains("}")) {
-                    isPlaceholder = false;
+        if (runs.isEmpty()) {
+            return;
+        }
 
-                    for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                        String placeholder = entry.getKey();
-                        if (sb.toString().contains(placeholder)) {
-                            sb = new StringBuilder(sb.toString().replace(placeholder, entry.getValue()));
-                        }
-                    }
-                    run.setText(sb.toString(), 0);
-                    sb = new StringBuilder();
+        // Создаем список сегментов с информацией о форматировании
+        List<TextSegment> segments = new ArrayList<>();
+
+        for (XWPFRun run : runs) {
+            String text = run.getText(0);
+            if (text != null && !text.isEmpty()) {
+                segments.add(new TextSegment(text, run.isBold(), run.isItalic(),
+                        run.getUnderline(), run.getFontSize(), run.getFontFamily()));
+            }
+        }
+
+        // Собираем весь текст
+        StringBuilder fullText = new StringBuilder();
+        for (TextSegment segment : segments) {
+            fullText.append(segment.text);
+        }
+
+        String originalText = fullText.toString();
+        String processedText = originalText;
+
+        // Заменяем плейсхолдеры
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            String placeholder = entry.getKey();
+            String value = entry.getValue();
+            if (value != null && processedText.contains(placeholder)) {
+                processedText = processedText.replace(placeholder, value);
+            }
+        }
+
+        // Если текст изменился, обновляем runs с сохранением основного форматирования
+        if (!originalText.equals(processedText)) {
+            // Очищаем все runs
+            for (XWPFRun run : runs) {
+                run.setText("", 0);
+            }
+
+            // Находим run с наименьшим форматированием для размещения текста
+            XWPFRun bestRun = runs.get(0);
+            for (XWPFRun run : runs) {
+                if (!run.isBold() && !run.isItalic() && run.getUnderline() == UnderlinePatterns.NONE) {
+                    bestRun = run;
+                    break;
                 }
             }
+
+            // Устанавливаем обработанный текст в лучший run
+            bestRun.setText(processedText, 0);
+        }
+    }
+
+    // Вспомогательный класс для хранения информации о сегменте текста
+    private static class TextSegment {
+        final String text;
+        final boolean bold;
+        final boolean italic;
+        final UnderlinePatterns underline;
+        final int fontSize;
+        final String fontFamily;
+
+        TextSegment(String text, boolean bold, boolean italic, UnderlinePatterns underline,
+                    int fontSize, String fontFamily) {
+            this.text = text;
+            this.bold = bold;
+            this.italic = italic;
+            this.underline = underline;
+            this.fontSize = fontSize;
+            this.fontFamily = fontFamily;
         }
     }
 }

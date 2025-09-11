@@ -23,12 +23,17 @@ public class WebConfig implements WebMvcConfigurer {
     private static final Long MAX_AGE = 3600L;
 
     @Bean
+    //commented out to disable CORS globally
+    //to add to cors, you should add frontend IP with port for some reason
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);
         String allowedIps = System.getenv("ALLOWED_IP_ADDRESSES");
         config.addAllowedOrigin("192.168.3.8");
+        config.addAllowedOrigin("192.168.31.109");
+        config.addAllowedOrigin("http://192.168.31.109/");
+        config.addAllowedOrigin("http://192.168.31.109:5432");
         config.addAllowedOrigin("192.168.3.8:80");
         config.addAllowedOrigin("localhost");
         config.addAllowedOrigin("localhost:80");
@@ -63,7 +68,9 @@ public class WebConfig implements WebMvcConfigurer {
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
                 HttpMethod.PUT.name(),
-                HttpMethod.DELETE.name()));
+                HttpMethod.DELETE.name(),
+                HttpMethod.OPTIONS.name()
+        ));
 
         config.setMaxAge(MAX_AGE);
         source.registerCorsConfiguration("/**", config);

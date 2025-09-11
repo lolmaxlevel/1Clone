@@ -59,7 +59,14 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.0</version>
+            <version>5.4.1</version>
+        </dependency>
+
+        <!-- poi-tl для работы с Word шаблонами -->
+        <dependency>
+            <groupId>com.deepoove</groupId>
+            <artifactId>poi-tl</artifactId>
+            <version>1.12.2</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -99,6 +106,7 @@
             <version>0.11.2</version>
             <scope>runtime</scope>
         </dependency>
+
 
     </dependencies>
 

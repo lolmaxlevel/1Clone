@@ -4,18 +4,19 @@ import com.lolmaxlevel.oneclone_backend.model.Document;
 import com.lolmaxlevel.oneclone_backend.model.Employee;
 import com.lolmaxlevel.oneclone_backend.repository.DocumentRepository;
 import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
-import com.lolmaxlevel.oneclone_backend.service.WordDocumentGenerator;
+import com.lolmaxlevel.oneclone_backend.service.PoiTlDocumentGenerator;
 import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
 import com.lolmaxlevel.oneclone_backend.types.*;
-import com.lolmaxlevel.oneclone_backend.utils.DateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,18 +31,19 @@ import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPl
 @RestController
 @RequestMapping("employee")
 public class EmployeeController {
-
+//#TODO добавить возможность генерации нового договора на человека, при этом старый договори все связаные с ним
+//допики\приложения должны помечаться как архивные и новые допики\приложения должны создаваться с новым номером договора
     private final String TEMPLATE_DIRECTORY_ROOT = "src/main/resources/document_templates/";
 
     private final EmployeeRepository employeeRepository;
-    private final WordDocumentGenerator wordDocumentGenerator;
+    private final PoiTlDocumentGenerator poiTlDocumentGenerator;
     private final DocumentRepository documentRepository;
 
     public EmployeeController(EmployeeRepository employeeRepository,
-                              WordDocumentGenerator wordDocumentGenerator,
+                              PoiTlDocumentGenerator poiTlDocumentGenerator,
                               DocumentRepository documentRepository) {
         this.employeeRepository = employeeRepository;
-        this.wordDocumentGenerator = wordDocumentGenerator;
+        this.poiTlDocumentGenerator = poiTlDocumentGenerator;
         this.documentRepository = documentRepository;
     }
 
@@ -64,7 +66,7 @@ public class EmployeeController {
             default:
                 throw new RuntimeException("Document type not found");
         }
-        filename += "№" + companySpecificId + "-2024" + " " + surname + " " + name + ".docx";
+        filename += "№" + companySpecificId + "-2025" + " " + surname + " " + name + ".docx";
         // encode filename to support cyrillic characters
         String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + encodedFilename);
@@ -78,7 +80,8 @@ public class EmployeeController {
             existingDocument = documentRepository.findByOwnerAndTypeAndDateFromAndDateToAndPrice(employee, documentType, dateFrom, dateTo, price);
             if (existingDocument == null) {
                 Document document = new Document();
-                document.setNumber(Math.toIntExact(employee.getId()));
+                document.setSeqNumber(documentRepository.countByOwnerAndTypeAndArchive(employee, documentType, false) + 1);
+                document.setNumber(Math.toIntExact(employee.getCompanySpecificId()));
                 document.setType(documentType);
                 document.setPrice(price);
                 document.setDateFrom(dateFrom);
@@ -86,6 +89,11 @@ public class EmployeeController {
                 document.setOwner(employee);
                 documentRepository.save(document);
                 existingDocument = document;
+
+                // Если создается новый контракт, автоматически создаем дополнительное соглашение и приложение
+                if (documentType == ActType.CONTRACT) {
+                    createAdditionalDocuments(employee, dateFrom, dateTo, price);
+                }
             }
         } else {
             if (documentType == ActType.APPENDIX) {
@@ -94,21 +102,45 @@ public class EmployeeController {
                 existingDocument = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, documentType);
             }
             if (existingDocument == null) {
-                throw new RuntimeException("Document not found");
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             }
         }
         return existingDocument;
     }
 
+    private void createAdditionalDocuments(Employee employee, LocalDate dateFrom, LocalDate dateTo, Double price) {
+        // Создаем дополнительное соглашение
+        // Дата начала = дата начала договора + 2 дня
+        LocalDate additionalDateFrom = dateFrom.plusDays(2);
+        LocalDate additionalDateTo = dateFrom.plusYears(1).minusDays(ThreadLocalRandom.current().nextInt(1, 6)); // от 1 до 5 дней
+
+        Document additionalAgreement = new Document();
+        additionalAgreement.setSeqNumber(documentRepository.countByOwnerAndTypeAndArchive(employee, ActType.ADDITIONAL, false) + 1);
+        additionalAgreement.setNumber(Math.toIntExact(employee.getCompanySpecificId()));
+        additionalAgreement.setType(ActType.ADDITIONAL);
+        additionalAgreement.setPrice(price);
+        additionalAgreement.setDateFrom(additionalDateFrom);
+        additionalAgreement.setDateTo(additionalDateTo);
+        additionalAgreement.setOwner(employee);
+        documentRepository.save(additionalAgreement);
+
+        Document appendix = new Document();
+        appendix.setSeqNumber(documentRepository.countByOwnerAndTypeAndArchive(employee, ActType.APPENDIX, false) + 1);
+        appendix.setNumber(Math.toIntExact(employee.getCompanySpecificId()));
+        appendix.setType(ActType.APPENDIX);
+        appendix.setPrice(price);
+        appendix.setDateFrom(dateFrom);
+        appendix.setDateTo(dateTo);
+        appendix.setOwner(employee);
+        documentRepository.save(appendix);
+
+        log.info("Created additional documents for employee {}: Additional agreement from {} to {}, Appendix from {} to {}",
+                 employee.getId(), additionalDateFrom, additionalDateTo, dateFrom, dateTo);
+    }
+
     private Map<String, String> fillPlaceholders(Employee employee, Document document, ActType documentType) {
         Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
         placeholders.putAll(getPlaceholdersFromDocument(document));
-        if (documentType == ActType.ADDITIONAL || documentType == ActType.APPENDIX) {
-            Document mainContract = documentRepository.findTopByOwnerAndTypeOrderByDateToDesc(employee, ActType.CONTRACT);
-            if (mainContract != null) {
-                placeholders.put("{{ CONTRACT_DATE_FULL }}", DateUtils.formatDateFull(mainContract.getDateFrom()));
-            }
-        }
         return placeholders;
     }
 
@@ -189,7 +221,7 @@ public class EmployeeController {
         Map<String, String> placeholders = fillPlaceholders(employee, document, documentType);
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
-        byte[] doc = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
+        byte[] doc = poiTlDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
             HttpHeaders headers = generateHeaders(employee.getName(), employee.getSurname(), documentType, employee.getCompanySpecificId());
             return ResponseEntity.ok()
@@ -209,7 +241,7 @@ public class EmployeeController {
         Map<String, String> placeholders = fillPlaceholders(employee, document, document.getType());
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + document.getType() + "_" + employee.getCompanyType() + ".docx";
-        byte[] doc = wordDocumentGenerator.generateFromTemplate(templatePath, placeholders);
+        byte[] doc = poiTlDocumentGenerator.generateFromTemplate(templatePath, placeholders);
         try {
             HttpHeaders headers = generateHeaders(employee.getName(), employee.getSurname(), document.getType(), employee.getCompanySpecificId());
             return ResponseEntity.ok()

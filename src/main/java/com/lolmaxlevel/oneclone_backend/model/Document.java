@@ -13,13 +13,23 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "documents")
 public class Document {
+    // Document entity representing a document in the system
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "id", nullable = false)
     private Long id;
 
+    // Номер документа == id человека
     @Column(name = "number", nullable = false)
     private int number;
+
+    //порядковый номер документа (для договоров будет добавляться после -, прим. №17-1,
+    // для других просто сам номер как порядковый)
+    @Column(name = "seq_number", nullable = false)
+    private int seqNumber;
+
+    @Column(name = "archive", nullable = false)
+    private boolean archive = false;
 
     @Column(name = "type", nullable = false)
     @Enumerated(EnumType.ORDINAL)
