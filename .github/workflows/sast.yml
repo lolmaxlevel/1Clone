@@ -52,7 +52,7 @@ jobs:
           mvn com.github.spotbugs:spotbugs-maven-plugin:4.8.2.0:spotbugs \
             -Dspotbugs.effort=Max \
             -Dspotbugs.threshold=Low \
-            -Dspotbugs.xmlOutput=true \
+            -Dspotbugs.xmlOutput=true \ 
             -Dspotbugs.xmlOutputDirectory=target/spotbugs \
             -Dspotbugs.excludeFilterFile=spotbugs-security-exclude.xml
         continue-on-error: true
@@ -63,23 +63,34 @@ jobs:
           echo "## 🔍 SpotBugs Analysis Results"
           echo "================================"
           
+          # Проверяем разные возможные местоположения отчета
+          SPOTBUGS_XML=""
           if [ -f target/spotbugs/spotbugsXml.xml ]; then
+            SPOTBUGS_XML="target/spotbugs/spotbugsXml.xml"
+          elif [ -f target/spotbugsXml.xml ]; then
+            SPOTBUGS_XML="target/spotbugsXml.xml"
+          elif [ -f target/spotbugsTemp.xml ]; then
+            SPOTBUGS_XML="target/spotbugsTemp.xml"
+          fi
+          
+          if [ -n "$SPOTBUGS_XML" ]; then
+            echo "Found SpotBugs report at: $SPOTBUGS_XML"
             # Подсчет найденных проблем
-            BUG_COUNT=$(grep -c "<BugInstance" target/spotbugs/spotbugsXml.xml 2>/dev/null || echo "0")
+            BUG_COUNT=$(grep -c "<BugInstance" "$SPOTBUGS_XML" 2>/dev/null || echo "0")
             echo "Total issues found: $BUG_COUNT"
             echo ""
           
             if [ "$BUG_COUNT" -gt 0 ]; then
               echo "### Issues by Category:"
               # Группировка по категориям
-              grep -o 'category="[^"]*"' target/spotbugs/spotbugsXml.xml | sort | uniq -c | while read count category; do
+              grep -o 'category="[^"]*"' "$SPOTBUGS_XML" | sort | uniq -c | while read count category; do
                 cat_name=$(echo $category | sed 's/category="\([^"]*\)"/\1/')
                 echo "- $cat_name: $count issues"
               done
               echo ""
           
               echo "### Issues by Priority:"
-              grep -o 'priority="[^"]*"' target/spotbugs/spotbugsXml.xml | sort | uniq -c | while read count priority; do
+              grep -o 'priority="[^"]*"' "$SPOTBUGS_XML" | sort | uniq -c | while read count priority; do
                 prio_name=$(echo $priority | sed 's/priority="\([^"]*\)"/\1/')
                 case $prio_name in
                   "1") echo "- High Priority: $count issues" ;;
@@ -91,12 +102,14 @@ jobs:
               echo ""
           
               echo "### Top 10 Issues:"
-              xmllint --format target/spotbugs/spotbugsXml.xml 2>/dev/null | grep -A 3 -B 1 "<BugInstance" | head -40 || echo "Could not parse detailed issues"
+              xmllint --format "$SPOTBUGS_XML" 2>/dev/null | grep -A 3 -B 1 "<BugInstance" | head -40 || echo "Could not parse detailed issues"
             else
               echo "✅ No issues found by SpotBugs!"
             fi
           else
             echo "❌ SpotBugs report not found"
+            echo "Checking target directory contents:"
+            ls -la target/ | head -20 || echo "Target directory not accessible"
           fi
 
       - name: Run OWASP Dependency Check
@@ -114,7 +127,7 @@ jobs:
             -DretireJsAnalyzerEnabled=false \
             -DhostileAnalyzerEnabled=false \
             -DfailBuildOnCVSS=7 \
-            -Dformat=JSON,HTML \
+            -Dformat=XML \
             -DprettyPrint=true
         continue-on-error: true
 
