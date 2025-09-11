@@ -129,6 +129,15 @@
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <version>4.9.4.2</version>
+                <executions>
+                    <execution>
+                        <id>spotbugs-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Low</threshold>
@@ -136,8 +145,6 @@
                     <excludeFilterFile>spotbugs-security-exclude.xml</excludeFilterFile>
                     <xmlOutput>true</xmlOutput>
                     <xmlOutputDirectory>target/spotbugs</xmlOutputDirectory>
-                    <!-- Отключаем проблемные детекторы FindSecBugs -->
-                    <omitVisitors>SpringEntityLeakDetector</omitVisitors>
                     <plugins>
                         <plugin>
                             <groupId>com.h3xstream.findsecbugs</groupId>

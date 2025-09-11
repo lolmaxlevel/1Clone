@@ -44,17 +44,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-owasp-data-
 
-      - name: Compile project
-        run: mvn clean compile test-compile -DskipTests
-
-      - name: Run SpotBugs Analysis
-        run: |
-          mvn com.github.spotbugs:spotbugs-maven-plugin:4.8.2.0:spotbugs \
-            -Dspotbugs.effort=Max \
-            -Dspotbugs.threshold=Low \
-            -Dspotbugs.xmlOutput=true \ 
-            -Dspotbugs.xmlOutputDirectory=target/spotbugs \
-            -Dspotbugs.excludeFilterFile=spotbugs-security-exclude.xml
+      - name: Run Build and SAST Analysis
+        run: mvn clean verify -DskipTests
         continue-on-error: true
 
       - name: Display SpotBugs Results
