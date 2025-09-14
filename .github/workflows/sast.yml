@@ -13,7 +13,6 @@ jobs:
 
     permissions:
       contents: read
-      security-events: write
       actions: read
 
     steps:
@@ -103,31 +102,6 @@ jobs:
             echo "⚠️ OWASP report not found - analysis may have failed due to NVD API limitations"
             echo "   This is expected in CI environments without NVD API key"
             echo "   Consider running locally with NVD API key for complete analysis"
-          fi
-
-      - name: Generate Security Summary
-        if: always()
-        run: |
-          echo ""
-          echo "## 📊 Security Analysis Summary"
-          echo "==============================="
-          
-          # OWASP summary
-          if [ -f target/dependency-check-report.json ]; then
-            OWASP_COUNT=$(jq '[.dependencies[]?.vulnerabilities[]?] | length' target/dependency-check-report.json 2>/dev/null || echo "0")
-            if [ "$OWASP_COUNT" -gt 0 ]; then
-              echo "⚠️  OWASP found $OWASP_COUNT known vulnerabilities in dependencies"
-          
-              # Check for high/critical
-              HIGH_CRITICAL=$(jq '[.dependencies[]?.vulnerabilities[]? | select(.severity == "HIGH" or .severity == "CRITICAL")] | length' target/dependency-check-report.json 2>/dev/null || echo "0")
-              if [ "$HIGH_CRITICAL" -gt 0 ]; then
-                echo "🚨 $HIGH_CRITICAL HIGH/CRITICAL severity vulnerabilities found!"
-              fi
-            else
-              echo "✅ OWASP: No vulnerabilities detected in analyzed components"
-            fi
-          else
-            echo "⚠️ OWASP: Analysis completed with limited functionality (no NVD API access)"
           fi
 
       - name: Fail if critical vulnerabilities found
