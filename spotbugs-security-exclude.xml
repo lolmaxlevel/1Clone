@@ -25,4 +25,19 @@
         <Class name="com.lolmaxlevel.oneclone_backend.model.File"/>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
+    <!-- not relevant cuz we get files by id, not by path from user -->
+    <Match>
+        <Class name="com.lolmaxlevel.oneclone_backend.repository.FileSystemRepositoryImpl"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+        <!-- not relevant cuz we get files by id, not by path from user -->
+    <Match>
+        <Class name="com.lolmaxlevel.oneclone_backend.service.FileLocationService"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+        <!-- not relevant cuz we get files by id, not by path from user -->
+    <Match>
+        <Class name="com.lolmaxlevel.oneclone_backend.service.PoiTlDocumentGenerator"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
 </FindBugsFilter>

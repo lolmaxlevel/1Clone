@@ -21,7 +21,7 @@ import java.io.IOException;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class JwtFilter extends GenericFilterBean {
+public final class JwtFilter extends GenericFilterBean {
 
     private static final String AUTHORIZATION = "Authorization";
 

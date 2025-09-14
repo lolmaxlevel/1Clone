@@ -10,6 +10,7 @@ import java.util.Collection;
 @Getter
 @Setter
 public class JwtAuth implements Authentication {
+    private static final long serialVersionUID = 1L;
 
     private boolean authenticated;
     private String username;

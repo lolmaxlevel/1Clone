@@ -112,18 +112,6 @@ jobs:
           echo "## 📊 Security Analysis Summary"
           echo "==============================="
           
-          # SpotBugs summary
-          if [ -f target/spotbugs/spotbugsXml.xml ]; then
-            SPOTBUGS_COUNT=$(grep -c "<BugInstance" target/spotbugs/spotbugsXml.xml 2>/dev/null || echo "0")
-            if [ "$SPOTBUGS_COUNT" -gt 0 ]; then
-              echo "⚠️  SpotBugs found $SPOTBUGS_COUNT potential security/quality issues"
-            else
-              echo "✅ SpotBugs: No issues detected"
-            fi
-          else
-            echo "❌ SpotBugs: Analysis failed"
-          fi
-          
           # OWASP summary
           if [ -f target/dependency-check-report.json ]; then
             OWASP_COUNT=$(jq '[.dependencies[]?.vulnerabilities[]?] | length' target/dependency-check-report.json 2>/dev/null || echo "0")
@@ -141,14 +129,6 @@ jobs:
           else
             echo "⚠️ OWASP: Analysis completed with limited functionality (no NVD API access)"
           fi
-          
-          echo ""
-          echo "## 📋 Notes:"
-          echo "- SpotBugs performs static code analysis for security and quality issues"
-          echo "- OWASP scans known vulnerabilities but may be limited without NVD API key"
-          echo "- For complete vulnerability scanning, consider setting up NVD_API_KEY secret"
-          echo "- Reports are archived as build artifacts for detailed analysis"
-
 
       - name: Fail if critical vulnerabilities found
         if: always()

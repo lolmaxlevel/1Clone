@@ -3,7 +3,7 @@ package com.lolmaxlevel.oneclone_backend.service;
 import com.lolmaxlevel.oneclone_backend.model.File;
 import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
 import com.lolmaxlevel.oneclone_backend.repository.FileDbRepository;
-import com.lolmaxlevel.oneclone_backend.repository.FileSystemRepositoryImpl;
+import com.lolmaxlevel.oneclone_backend.repository.FileSystemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;
@@ -14,22 +14,22 @@ import java.io.IOException;
 
 @Service
 public class FileLocationService {
-    private final FileSystemRepositoryImpl fileSystemRepositoryImpl;
+    private final FileSystemRepository fileSystemRepository;
     private final FileDbRepository fileDbRepository;
     private final EmployeeRepository employeeRepository;
 
     @Autowired
-    public FileLocationService(FileSystemRepositoryImpl fileSystemRepositoryImpl,
+    public FileLocationService(FileSystemRepository fileSystemRepository,
                                FileDbRepository fileDbRepository,
                                EmployeeRepository employeeRepository) {
-        this.fileSystemRepositoryImpl = fileSystemRepositoryImpl;
+        this.fileSystemRepository = fileSystemRepository;
         this.fileDbRepository = fileDbRepository;
 
         this.employeeRepository = employeeRepository;
     }
 
     public File save(byte[] bytes, String fileName, Long owner) throws IOException {
-        String location = fileSystemRepositoryImpl.save(bytes, fileName);
+        String location = fileSystemRepository.save(bytes, fileName);
 
         return fileDbRepository.save(new File(fileName, location, employeeRepository.findById(owner).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
@@ -39,11 +39,11 @@ public class FileLocationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
 
-        return fileSystemRepositoryImpl.findInFileSystem(file.getUri());
+        return fileSystemRepository.findInFileSystem(file.getUri());
     }
 
     public String deleteFile(Long id) {
-        fileSystemRepositoryImpl.deleteFile(this.find(id));
+        fileSystemRepository.deleteFile(this.find(id));
         fileDbRepository.deleteById(id);
         return "Deleted";
     }

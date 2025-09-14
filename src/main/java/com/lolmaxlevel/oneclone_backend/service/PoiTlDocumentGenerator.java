@@ -37,10 +37,10 @@ public class PoiTlDocumentGenerator {
 
         } catch (IOException e) {
             log.error("IO error while generating document: {}", e.getMessage(), e);
-            return null;
+            return new byte[0];
         } catch (Exception e) {
             log.error("Unexpected error while generating document: {}", e.getMessage(), e);
-            return null;
+            return new byte[0];
         }
     }
 }
