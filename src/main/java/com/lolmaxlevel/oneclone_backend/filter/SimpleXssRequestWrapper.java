@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 @Slf4j
-public class SimpleXssRequestWrapper extends HttpServletRequestWrapper {
+public final class SimpleXssRequestWrapper extends HttpServletRequestWrapper {
 
     private final String cleanedBody;
 
@@ -37,7 +37,7 @@ public class SimpleXssRequestWrapper extends HttpServletRequestWrapper {
     public String[] getParameterValues(String parameter) {
         String[] values = super.getParameterValues(parameter);
         if (values == null) {
-            return null;
+            return new String[0];
         }
 
         String[] escapedValues = new String[values.length];
@@ -94,7 +94,7 @@ public class SimpleXssRequestWrapper extends HttpServletRequestWrapper {
 
     @Override
     public BufferedReader getReader() throws IOException {
-        return new BufferedReader(new InputStreamReader(this.getInputStream()));
+        return new BufferedReader(new InputStreamReader(this.getInputStream(), StandardCharsets.UTF_8));
     }
 
     private String escapeHtml(String value) {
@@ -118,7 +118,7 @@ public class SimpleXssRequestWrapper extends HttpServletRequestWrapper {
             }
 
             return mapper.writeValueAsString(rootNode);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.warn("Failed to parse JSON for escaping, returning original: {}", e.getMessage());
             return jsonString;
         }

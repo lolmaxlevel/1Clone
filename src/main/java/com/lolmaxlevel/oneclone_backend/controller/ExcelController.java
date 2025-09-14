@@ -1,5 +1,6 @@
 package com.lolmaxlevel.oneclone_backend.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lolmaxlevel.oneclone_backend.model.Employee;
 import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
@@ -70,7 +71,7 @@ public class ExcelController {
             ObjectMapper objectMapper = new ObjectMapper();
             String json = objectMapper.writeValueAsString(rowsData);
             return ResponseEntity.ok(json);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.warn("Error parsing Excel file", e);
             return ResponseEntity.badRequest().body(null);
         }
@@ -221,7 +222,7 @@ public class ExcelController {
                 if (russianName.equalsIgnoreCase(value)) {
                     return enumConstant;
                 }
-            } catch (Exception e) {
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException | InvocationTargetException e) {
                 throw new IllegalArgumentException("Error accessing russianName field of enum " + enumClass.getCanonicalName(), e);
             }
         }
