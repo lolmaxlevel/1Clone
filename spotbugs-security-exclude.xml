@@ -4,4 +4,8 @@
     <Match>
         <Class name="~.*Test.*"/>
     </Match>
+    <!-- not sure if its a big deal here, so disable it for less garbage in output -->
+    <Match>
+        <Bug pattern="CRLF_INJECTION_LOGS"/>
+    </Match>
 </FindBugsFilter>
