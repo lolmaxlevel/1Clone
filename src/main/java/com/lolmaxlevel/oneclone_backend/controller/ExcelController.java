@@ -15,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -152,6 +154,7 @@ public class ExcelController {
                             case "Должность" ->
                                     employee.setWorkPosition(findEnumByRussianNameIgnoreCase(WorkPositionType.class, cellValue));
                             case "ОМВД" -> employee.setOmvd(cellValue);
+                            default -> log.warn("Unknown header: {}", headers.get(cellNum));
                         }
                         employee.setCompanyType(CompanyType.AM);
                     } else {
@@ -173,7 +176,7 @@ public class ExcelController {
             // Сохранение сотрудников в базу данных
             employeeRepository.saveAll(employees);
             return ResponseEntity.ok("Employees uploaded successfully");
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.warn("Error uploading employees from Excel file", e);
             return ResponseEntity.badRequest().body("Error uploading employees");
         }
@@ -188,7 +191,7 @@ public class ExcelController {
                 if (name.equalsIgnoreCase(value)) {
                     return enumConstant;
                 }
-            } catch (Exception e) {
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                 throw new IllegalArgumentException("Error accessing name field of enum " + enumClass.getCanonicalName(), e);
             }
         }
@@ -203,7 +206,7 @@ public class ExcelController {
                 if (officialName.equalsIgnoreCase(value)) {
                     return enumConstant;
                 }
-            } catch (Exception e) {
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException | InvocationTargetException e) {
                 throw new IllegalArgumentException("Error accessing officialName field of enum " + enumClass.getCanonicalName(), e);
             }
         }

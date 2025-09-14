@@ -12,6 +12,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Locale;
 import java.util.Objects;
 
 @Slf4j
@@ -44,7 +45,7 @@ class FileController {
         log.info("Download request: {}", fileId);
         String fileName =
                 Objects.requireNonNull(fileLocationService.find(fileId).getFilename()).split("-", 2)[1];
-        fileName = StringUtils.convertCyrilic(fileName.toLowerCase());
+        fileName = StringUtils.convertCyrilic(fileName.toLowerCase(new Locale("ru")));
         response.addHeader("Content-Disposition", "attachment; filename=" + fileName);
         return fileLocationService.find(fileId);
     }

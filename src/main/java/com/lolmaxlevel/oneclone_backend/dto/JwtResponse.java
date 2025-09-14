@@ -7,7 +7,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class JwtResponse {
-    private final String type = "Bearer";
+    private final static String type = "Bearer";
     @JsonProperty("access_token")
     private String accessToken;
     @JsonProperty("refresh_token")
