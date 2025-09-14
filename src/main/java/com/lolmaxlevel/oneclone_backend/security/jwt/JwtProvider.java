@@ -19,7 +19,7 @@ import java.util.Date;
 
 @Slf4j
 @Component
-public class JwtProvider {
+public final class JwtProvider {
 
 
     private static final long ACCESS_TOKEN_VALIDITY_MINUTES = 5;
