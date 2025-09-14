@@ -33,7 +33,9 @@ import static com.lolmaxlevel.oneclone_backend.utils.PlaceHoldersExtractor.getPl
 public class EmployeeController {
 //#TODO добавить возможность генерации нового договора на человека, при этом старый договори все связаные с ним
 //допики\приложения должны помечаться как архивные и новые допики\приложения должны создаваться с новым номером договора
-    private final String TEMPLATE_DIRECTORY_ROOT = "src/main/resources/document_templates/";
+
+    // path should be in application properties or env variable
+    private static final String TEMPLATE_DIRECTORY_ROOT = "src/main/resources/document_templates/";
 
     private final EmployeeRepository employeeRepository;
     private final PoiTlDocumentGenerator poiTlDocumentGenerator;
@@ -64,7 +66,7 @@ public class EmployeeController {
                 filename += "Приложение к договору ";
                 break;
             default:
-                throw new RuntimeException("Document type not found");
+                throw new IllegalArgumentException("Document type not found");
         }
         filename += "№" + companySpecificId + "-2025" + " " + surname + " " + name + ".docx";
         // encode filename to support cyrillic characters
@@ -319,7 +321,7 @@ public class EmployeeController {
                 employee.setCompanyType(CompanyType.valueOf(value));
                 break;
             default:
-                throw new RuntimeException("Field not found");
+                throw new IllegalArgumentException("Field not found");
         }
         return employeeRepository.save(employee);
     }

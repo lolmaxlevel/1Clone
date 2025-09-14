@@ -29,7 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);
-        String allowedIps = System.getenv("ALLOWED_IP_ADDRESSES");
+//        String allowedIps = System.getenv("ALLOWED_IP_ADDRESSES");
         config.addAllowedOrigin("192.168.3.8");
         config.addAllowedOrigin("192.168.31.109");
         config.addAllowedOrigin("http://192.168.31.109/");

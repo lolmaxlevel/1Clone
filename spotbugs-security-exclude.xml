@@ -8,4 +8,12 @@
     <Match>
         <Bug pattern="CRLF_INJECTION_LOGS"/>
     </Match>
+    <!-- Don't care if we have predictable random -->
+    <Match>
+        <Bug pattern="PREDICTABLE_RANDOM"/>
+    </Match>
+        <!-- Suppress informational finding about Spring endpoints -->
+    <Match>
+        <Bug pattern="SPRING_ENDPOINT"/>
+    </Match>
 </FindBugsFilter>
