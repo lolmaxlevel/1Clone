@@ -17,7 +17,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("excel")
@@ -178,14 +181,11 @@ public class ExcelController {
 
 
     private <T extends Enum<T>> T findEnumByNameIgnoreCase(Class<T> enumClass, String value) {
-        if (value == null) {
-            throw new IllegalArgumentException("Value cannot be null for enum " + enumClass.getCanonicalName());
-        }
         for (T enumConstant : enumClass.getEnumConstants()) {
             try {
                 // Use the getter method to access the name field
                 String name = (String) enumClass.getMethod("getName").invoke(enumConstant);
-                if (name != null && name.toLowerCase(Locale.ROOT).equals(value.toLowerCase(Locale.ROOT))) {
+                if (name.equalsIgnoreCase(value)) {
                     return enumConstant;
                 }
             } catch (Exception e) {
@@ -196,12 +196,11 @@ public class ExcelController {
     }
 
     private <T extends Enum<T>> T findEnumByOfficialNameIgnoreCase(Class<T> enumClass, String value) {
-        // using russian locale for consistent behavior without server locale dependency
-        Locale russianLocale = new Locale("ru");
         for (T enumConstant : enumClass.getEnumConstants()) {
             try {
+                // Use the getter method to access the officialName field
                 String officialName = (String) enumClass.getMethod("getOfficialName").invoke(enumConstant);
-                if (value.toLowerCase(russianLocale).equals(officialName.toLowerCase(russianLocale))) {
+                if (officialName.equalsIgnoreCase(value)) {
                     return enumConstant;
                 }
             } catch (Exception e) {
@@ -212,12 +211,11 @@ public class ExcelController {
     }
 
     private <T extends Enum<T>> T findEnumByRussianNameIgnoreCase(Class<T> enumClass, String value) {
-        // using russian locale for consistent behavior without server locale dependency
-        Locale russianLocale = new Locale("ru");
         for (T enumConstant : enumClass.getEnumConstants()) {
             try {
+                // Use the getter method to access the russianName field
                 String russianName = (String) enumClass.getMethod("getRussianName").invoke(enumConstant);
-                if (value.toLowerCase(russianLocale).equals(russianName.toLowerCase(russianLocale))) {
+                if (russianName.equalsIgnoreCase(value)) {
                     return enumConstant;
                 }
             } catch (Exception e) {

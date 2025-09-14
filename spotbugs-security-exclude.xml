@@ -16,4 +16,8 @@
     <Match>
         <Bug pattern="SPRING_ENDPOINT"/>
     </Match>
+
+    <Match>
+        <Bug pattern="IMPROPER_UNICODE"/>
+    </Match>
 </FindBugsFilter>
