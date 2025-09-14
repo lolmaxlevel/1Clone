@@ -20,12 +20,13 @@ public class XssFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
 
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        log.debug("Processing request through simple XSS filter for URI: {}", httpRequest.getRequestURI());
-
-
-        SimpleXssRequestWrapper wrappedRequest = new SimpleXssRequestWrapper(httpRequest);
-        chain.doFilter(wrappedRequest, response);
+        if (request instanceof HttpServletRequest httpRequest) {
+            log.debug("Processing request through simple XSS filter for URI: {}", httpRequest.getRequestURI());
+            SimpleXssRequestWrapper wrappedRequest = new SimpleXssRequestWrapper(httpRequest);
+            chain.doFilter(wrappedRequest, response);
+        } else {
+            chain.doFilter(request, response);
+        }
     }
 
     @Override

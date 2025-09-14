@@ -20,4 +20,9 @@
     <Match>
         <Bug pattern="IMPROPER_UNICODE"/>
     </Match>
+    <!-- it's JPA class so we don't really care -->
+    <Match>
+        <Class name="com.lolmaxlevel.oneclone_backend.model.File"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
 </FindBugsFilter>

@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+
 @Service
 public class FileLocationService {
     private final FileSystemRepositoryImpl fileSystemRepositoryImpl;
@@ -26,7 +28,7 @@ public class FileLocationService {
         this.employeeRepository = employeeRepository;
     }
 
-    public File save(byte[] bytes, String fileName, Long owner) throws Exception {
+    public File save(byte[] bytes, String fileName, Long owner) throws IOException {
         String location = fileSystemRepositoryImpl.save(bytes, fileName);
 
         return fileDbRepository.save(new File(fileName, location, employeeRepository.findById(owner).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))));
