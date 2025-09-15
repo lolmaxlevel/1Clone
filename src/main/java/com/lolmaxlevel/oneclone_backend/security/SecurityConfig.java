@@ -55,8 +55,6 @@ public class SecurityConfig {
                                 "/auth/register",
                                 "/auth/login",
                                 "/auth/refresh", "/excel/upload-employees").permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/employee/get-document").permitAll()
                         .anyRequest()
                         .authenticated()
                 )
