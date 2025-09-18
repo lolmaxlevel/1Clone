@@ -20,8 +20,6 @@ import java.util.Date;
 @Slf4j
 @Component
 public final class JwtProvider {
-
-
     private static final long ACCESS_TOKEN_VALIDITY_MINUTES = 5;
     private static final long REFRESH_TOKEN_VALIDITY_DAYS = 30;
 
@@ -35,8 +33,8 @@ public final class JwtProvider {
     }
 
     public String generateAccessToken(@NonNull User user) {
-        final LocalDateTime now = LocalDateTime.now();
-        final Instant accessExpirationInstant = now.plusMinutes(ACCESS_TOKEN_VALIDITY_MINUTES).atZone(ZoneId.systemDefault()).toInstant();
+        final Instant now = Instant.now();
+        final Instant accessExpirationInstant = now.plusSeconds(ACCESS_TOKEN_VALIDITY_MINUTES * 60L);
         final Date accessExpiration = Date.from(accessExpirationInstant);
         return Jwts.builder()
                 .setSubject(user.getUsername())
@@ -47,8 +45,8 @@ public final class JwtProvider {
     }
 
     public String generateRefreshToken(@NonNull User user) {
-        final LocalDateTime now = LocalDateTime.now();
-        final Instant refreshExpirationInstant = now.plusDays(REFRESH_TOKEN_VALIDITY_DAYS).atZone(ZoneId.systemDefault()).toInstant();
+        final Instant now = Instant.now();
+        final Instant refreshExpirationInstant = now.plusSeconds(REFRESH_TOKEN_VALIDITY_DAYS * 86_400L);
         final Date refreshExpiration = Date.from(refreshExpirationInstant);
         return Jwts.builder()
                 .setSubject(user.getUsername())

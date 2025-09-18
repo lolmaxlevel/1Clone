@@ -23,8 +23,6 @@ public class WebConfig implements WebMvcConfigurer {
     private static final Long MAX_AGE = 3600L;
 
     @Bean
-    //commented out to disable CORS globally
-    //to add to cors, you should add frontend IP with port for some reason
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
