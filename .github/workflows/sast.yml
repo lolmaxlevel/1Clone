@@ -2,9 +2,9 @@ name: SAST Security Analysis
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ aboba ]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ aboba ]
 
 jobs:
   sast-analysis:

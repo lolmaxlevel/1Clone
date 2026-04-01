@@ -146,7 +146,7 @@ public class EmployeeController {
 
     @GetMapping("/all")
     public Page<Employee> getAllEmployees(
-            Specification<Employee> specification,
+            @ModelAttribute("specification") Specification<Employee> specification,
             Pageable pageable) {
         return employeeRepository.findAll(specification, pageable);
     }
