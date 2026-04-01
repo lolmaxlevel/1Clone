@@ -5,7 +5,6 @@ import com.lolmaxlevel.oneclone_backend.model.Employee;
 import com.lolmaxlevel.oneclone_backend.repository.DocumentRepository;
 import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
 import com.lolmaxlevel.oneclone_backend.service.PoiTlDocumentGenerator;
-import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
 import com.lolmaxlevel.oneclone_backend.types.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,7 +13,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -137,29 +135,20 @@ public class EmployeeController {
         documentRepository.save(appendix);
 
         log.info("Created additional documents for employee {}: Additional agreement from {} to {}, Appendix from {} to {}",
-                 employee.getId(), additionalDateFrom, additionalDateTo, dateFrom, dateTo);
+                employee.getId(), additionalDateFrom, additionalDateTo, dateFrom, dateTo);
     }
 
-    private Map<String, String> fillPlaceholders(Employee employee, Document document, ActType documentType) {
+    private Map<String, String> fillPlaceholders(Employee employee, Document document) {
         Map<String, String> placeholders = getPlaceholdersFromEmployee(employee);
         placeholders.putAll(getPlaceholdersFromDocument(document));
         return placeholders;
     }
 
     @GetMapping("/all")
-    public Page<Employee> getAllEmployees(Pageable pageable, @RequestParam MultiValueMap<String, String> allParams) {
-        log.info("Get all employees request{}", allParams);
-        Specification<Employee> spec = Specification.where(null);
-
-        for (Map.Entry<String, List<String>> entry : allParams.entrySet()) {
-            if (!entry.getKey().equals("page") && !entry.getKey().equals("size") && !entry.getKey().equals("sort")) {
-                Specification<Employee> specForKey;
-                specForKey = new GenericSpecification<>(entry.getKey(), entry.getValue());
-                spec = spec.and(specForKey);
-            }
-        }
-
-        return employeeRepository.findAll(spec, pageable);
+    public Page<Employee> getAllEmployees(
+            Specification<Employee> specification,
+            Pageable pageable) {
+        return employeeRepository.findAll(specification, pageable);
     }
 
     @PostMapping("/add")
@@ -220,7 +209,7 @@ public class EmployeeController {
 
         Employee employee = getEmployeeById(employeeId);
         Document document = getOrCreateDocument(employee, documentType, dateFrom, dateTo, price);
-        Map<String, String> placeholders = fillPlaceholders(employee, document, documentType);
+        Map<String, String> placeholders = fillPlaceholders(employee, document);
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + documentType + "_" + employee.getCompanyType() + ".docx";
         byte[] doc = poiTlDocumentGenerator.generateFromTemplate(templatePath, placeholders);
@@ -240,7 +229,7 @@ public class EmployeeController {
         log.info("Get exist document request id: {}", documentId);
         Document document = documentRepository.findById(documentId).orElseThrow(() -> new RuntimeException("Document not found"));
         Employee employee = document.getOwner();
-        Map<String, String> placeholders = fillPlaceholders(employee, document, document.getType());
+        Map<String, String> placeholders = fillPlaceholders(employee, document);
 
         String templatePath = TEMPLATE_DIRECTORY_ROOT + "templ_" + document.getType() + "_" + employee.getCompanyType() + ".docx";
         byte[] doc = poiTlDocumentGenerator.generateFromTemplate(templatePath, placeholders);
