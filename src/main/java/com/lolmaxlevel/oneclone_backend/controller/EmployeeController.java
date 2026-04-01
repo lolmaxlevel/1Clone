@@ -5,6 +5,7 @@ import com.lolmaxlevel.oneclone_backend.model.Employee;
 import com.lolmaxlevel.oneclone_backend.repository.DocumentRepository;
 import com.lolmaxlevel.oneclone_backend.repository.EmployeeRepository;
 import com.lolmaxlevel.oneclone_backend.service.PoiTlDocumentGenerator;
+import com.lolmaxlevel.oneclone_backend.specification.GenericSpecification;
 import com.lolmaxlevel.oneclone_backend.types.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -144,10 +145,40 @@ public class EmployeeController {
         return placeholders;
     }
 
+    private Specification<Employee> andIfPresent(Specification<Employee> base, Specification<Employee> next) {
+        return base == null ? next : base.and(next);
+    }
+
+    private Specification<Employee> textContains(String field, String value) {
+        return new GenericSpecification<>(field, List.of(value));
+    }
+
+    private Specification<Employee> enumEquals(String field, String value) {
+        return new GenericSpecification<>(field, List.of(value));
+    }
+
     @GetMapping("/all")
     public Page<Employee> getAllEmployees(
-            @ModelAttribute("specification") Specification<Employee> specification,
+            @RequestParam(required = false) String surname,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String workObject,
+            @RequestParam(required = false) String workAddress,
+            @RequestParam(required = false) String secondName,
+            @RequestParam(required = false) String companySpecificId,
+            @RequestParam(required = false) CompanyType companyType,
+            @RequestParam(required = false) WorkPositionType workPosition,
             Pageable pageable) {
+        Specification<Employee> specification = null;
+
+        if (surname != null && !surname.isBlank()) specification = andIfPresent(specification, textContains("surname", surname));
+        if (name != null && !name.isBlank()) specification = andIfPresent(specification, textContains("name", name));
+        if (secondName != null && !secondName.isBlank()) specification = andIfPresent(specification, textContains("secondName", secondName));
+        if (workObject != null && !workObject.isBlank()) specification = andIfPresent(specification, textContains("workObject", workObject));
+        if (workAddress != null && !workAddress.isBlank()) specification = andIfPresent(specification, textContains("workAddress", workAddress));
+        if (companySpecificId != null && !companySpecificId.isBlank()) specification = andIfPresent(specification, new GenericSpecification<>("companySpecificId", List.of(companySpecificId)));
+        if (companyType != null) specification = andIfPresent(specification, enumEquals("companyType", companyType.name()));
+        if (workPosition != null) specification = andIfPresent(specification, enumEquals("workPosition", workPosition.name()));
+
         return employeeRepository.findAll(specification, pageable);
     }
 
